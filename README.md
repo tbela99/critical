@@ -90,14 +90,14 @@ urls.forEach(url => {
 ### Node script options
 
 - options: _object_
-  - headless: _bool_ start puppeteer in headless mode. default _true_
-  - fonts: _bool_ generate javascript to load web fonts. default _true_
-  - screenshot: _bool_ generate screenshot for each viewport mentioned. default _false_
-  - console: _bool_ log console messages from the pages. default _true_
-  - secure: _bool_ enforce browser security features such as CSP and same origin policy. default _false_
-  - filename: _string_ prefix of the files generated
-  - width: _int_ viewport width. default _800_
-  - height: _int_ viewport height. default _600_
+  - headless: _bool_. start puppeteer in headless mode. default _true_
+  - fonts: _bool_. generate javascript to load web fonts. default _true_
+  - screenshot: _bool_. generate screenshot for each viewport mentioned. default _false_
+  - console: _bool_. log console messages from the pages. default _true_
+  - secure: _bool_. enforce browser security features such as CSP and same origin policy. default _false_
+  - filename: _string_. prefix of the files generated
+  - width: _int_. viewport width. default _800_
+  - height: _int_. viewport height. default _600_
   - dimensions: _array_ or _string_. array of viewports. this takes precedence over height and width. viewports can be specified as objects with width and height property or a string.
   - container: _bool_. turn off additional features required to run inside a container
   - output: _string_. change output directory. default _'./output/'_
@@ -131,5 +131,5 @@ Options:
 
 ```shell
 
-$ node ./bin/critical-cli.js https://github.com/ https://nodejs.org -i -d '1440x900' -d '1366x768'
+$ node ./bin/critical-cli.js https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768'
 ```
