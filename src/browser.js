@@ -7,9 +7,9 @@ import {fontscript} from "./critical/fontscript";
  * @param {string} filename
  * @return {Promise<{styles: string[], fonts: object[]}>}
  */
-async function extractAndDownload(filename = 'critical.css') {
+async function extractAndDownload(filename = 'critical.css', options = {}) {
 
-    return extract().then(async content => {
+    return extract(options).then(async content => {
         await download(content.styles, filename, 'text/css; charset=utf-8').then(async () => {
 
             if (content.fonts.length > 0) {
@@ -22,5 +22,4 @@ async function extractAndDownload(filename = 'critical.css') {
     });
 }
 
-
-export {extract, extractAndDownload as download}
+export {extract, fontscript, extractAndDownload as download}

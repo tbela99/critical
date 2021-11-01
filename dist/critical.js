@@ -36,8 +36,9 @@
      *
      * @param {string} url
      * @param {object} options?
-     * - fonts:
-     * - headless:
+     * - fonts: true,
+     * - headless: true,
+     * - console: true,
      * - screenshot: false,
      * - secure: false,
      * - filename: '',
@@ -47,12 +48,13 @@
      * - container: false
      * - output: 'output/'
      *
-     * @returns {Promise<{fonts: string[], styles: object[]}>}
+     * @returns {Promise<{fonts: string[], styles: object[], stats: object[]}}>}
      */
     async function critical(url, options = {}) {
 
         const styles = new Set;
         let fonts = new Set;
+        const stats = [];
 
         if (['"', "'"].includes(url.charAt(0))) {
 
@@ -64,6 +66,7 @@
             fonts: true,
             headless: true,
             screenshot: false,
+            console: true,
             secure: false,
             filename: '',
             width: 800,
@@ -216,10 +219,8 @@
             if (options.console) {
 
                 page.on('console', message =>
-                    console.log(`[${shortUrl}]> ${message.type().substr(0, 3).replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
+                    console.log(`[${shortUrl}]> ${message.type().substr(0, 5).replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
                     .on('pageerror', ({message}) => console.log(`[${shortUrl}]> ${message}.red`))
-                    // .on('response', response =>
-                    //     console.log(`${response.status()} ${response.url()}`))
                     .on('requestfailed', request => {
 
                         const failure = request.failure();
@@ -228,6 +229,7 @@
             }
 
             console.info(`[${shortUrl}]> open `.blue + url);
+
             await page.goto(url, {waitUntil: 'networkidle0', timeout: 0});
             await page.addScriptTag({url: script});
 
@@ -243,6 +245,7 @@
 
             data.styles.forEach(line => styles.add(line));
             data.fonts.forEach(line => fonts.add(line));
+            stats.push({width: dimension.width, height: dimension.height, stats: data.stats});
 
             if (options.screenshot) {
 
@@ -311,7 +314,7 @@
             });
         }
 
-        return {styles: [...styles], fonts: [...fonts]};
+        return {styles: [...styles], fonts: [...fonts], stats};
     }
 
     exports.critical = critical;

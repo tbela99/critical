@@ -32,7 +32,7 @@ var critical = (function (exports) {
      */
     function resolve(path, from) {
 
-        if (path.substr(0, 5) === 'data:') {
+        if (path.match(/^['"]?data:/)) {
 
             return path;
         }
@@ -52,33 +52,13 @@ var critical = (function (exports) {
             return pathURL.toString();
         }
 
-        const base = baseURL.pathname.split('/');
-        const tokens = pathURL.pathname.split('/');
-
-        while (tokens.length > 0 && base.length > 0) {
-
-            if (tokens[0] != base[0]) {
-
-                break;
-            }
-
-            base.shift();
-            tokens.shift();
-        }
-
-        let length = base.length;
-        while (length-- > 1) {
-
-            tokens.unshift('..');
-        }
-
-        return tokens.join('/') + pathURL.search;
+        return pathURL.pathname + pathURL.search + pathURL.hash;
     }
 
     /**
      * {Object} options
      * - fonts: generate javascript font loading script
-     * @returns {Promise<{styles: string[], fonts: object[]}>}
+     * @returns {Promise<{styles: string[], fonts: object[], stats: object}>}
      */
     async function extract(options = {}) {
 
@@ -94,53 +74,69 @@ var critical = (function (exports) {
 
         // Get a list of all the elements in the view.
         const height = window.innerHeight;
-        const walker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT, function (node) {
-            return NodeFilter.FILTER_ACCEPT;
-        }, true);
+        const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: function (node) {
+            return NodeFilter.SHOW_ELEMENT;
+        }});
 
         const fonts = new Set;
         const fontFamilies = new Set;
         const files = new Map;
+        let nodeCount = 0;
+        let k;
+        let rule;
+        let rules;
 
-        [].push.apply(allStylesheets, Array.from(document.styleSheets).filter(rule => rule.media.mediaText == '' || (rule.media.mediaText != 'print' && window.matchMedia(rule.media.mediaText).matches)
+        performance.mark('filterStylesheets');
 
-        ).map(stylesheet => {
+        for (k = 0; k < document.styleSheets.length; k++) {
+
+            rule = document.styleSheets[k];
+
+            if (rule.media.mediaText == 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
+
+                continue;
+            }
 
             try {
 
-                return Array.from(stylesheet.cssRules || stylesheet.rules).map(rule => {
+                rules = rule.cssRules || rule.rules;
 
-                    return {rule, match: false}
-                })
+                for (let l = 0; l < rules.length; l++) {
+
+                    allStylesheets.push({rule: rules[l], match: false});
+                }
+
             } catch (e) {
 
-                console.error(JSON.stringify({'message': e.message, stylesheet: stylesheet.href}, null, 1));
+                console.error(JSON.stringify({'message': e.message, stylesheet: rule.href}, null, 1));
             }
+        }
 
-            return false
-        }).filter(rules => rules).flat());
+        performance.measure('filter stylesheets', 'filterStylesheets');
 
         if (allStylesheets.length === 0) {
 
             return [];
         }
 
+        let node;
         let allStylesLength = allStylesheets.length;
 
-        while (walker.nextNode()) {
+        performance.mark('nodeWalking');
 
-            let node = walker.currentNode;
+        while ((node = walker.nextNode())) {
 
-            if (node.nodeType != Node.ELEMENT_NODE) {
+            if (['SCRIPT', 'LINK', 'HEAD', 'META', 'TITLE', 'NOSCRIPT'].includes(node.tagName)) {
 
                 continue;
             }
 
+            nodeCount++;
             let rect = node.getBoundingClientRect();
 
-            if (rect.top < height && !['SCRIPT', 'LINK', 'HEAD', 'META', 'TITLE'].includes(node.tagName)) {
+            if (rect.top < height) {
 
-                for (let k = 0; k < allStylesLength; k++) {
+                for (k = 0; k < allStylesLength; k++) {
 
                     if (allStylesheets[k].match) {
 
@@ -159,41 +155,32 @@ var critical = (function (exports) {
                             }
                         }
 
-                    } else if (allStylesheets[k].rule instanceof CSSMediaRule) {
+                    } else if (allStylesheets[k].rule instanceof CSSMediaRule || allStylesheets[k].rule instanceof CSSImportRule) {
 
-                        let rules = Array.from(allStylesheets[k].rule.cssRules || allStylesheets[k].rule.rules).map(rule => {
+                        if (allStylesheets[k].rule.media.mediaText !== '' && !window.matchMedia(allStylesheets[k].rule.media.mediaText).matches) {
+                            continue;
+                        }
 
-                            return {rule, match: false}
-                        });
+                        const rules = [];
+                        const sheet = allStylesheets[k].rule.cssRules || allStylesheets[k].rule.rules;
+                        let l;
+
+                        for (l = 0; l < sheet.length; l++) {
+
+                            rules.push({rule:  sheet[l], match: false});
+                        }
 
                         rules.unshift(k + 1, 0);
                         allStylesheets.splice.apply(allStylesheets, rules);
                         allStylesLength = allStylesheets.length;
-                    } else if (allStylesheets[k].rule instanceof CSSImportRule) {
 
-                        try {
-
-                            if (!window.matchMedia(allStylesheets[k].rule.media.mediaText).matches) {
-                                continue;
-                            }
-
-                            let rules = Array.from(allStylesheets[k].rule.styleSheet.cssRules || allStylesheets[k].rule.styleSheet.rules).map(rule => {
-
-                                return {rule, match: false}
-                            });
-
-                            rules.unshift(k + 1, 0);
-                            allStylesheets.splice.apply(allStylesheets, rules);
-                            allStylesLength = allStylesheets.length;
+                        if (allStylesheets[k].rule instanceof CSSImportRule) {
 
                             styles.add('/* @import: ' + allStylesheets[k].rule.href + ' from ' + (allStylesheets[k].rule.parentStyleSheet.href || `inline #${inlineCount}`) + ' */');
-                        } catch (e) {
-
-                            // console.error(1);
-                            console.error(e.message);
-                            console.error(allStylesheets[k].rule.href);
                         }
-                    } else if (allStylesheets[k].rule instanceof CSSFontFaceRule) {
+
+                    }
+                    else if (allStylesheets[k].rule instanceof CSSFontFaceRule) {
 
                         if (allStylesheets[k].rule.style.getPropertyValue('font-family') && allStylesheets[k].rule.style.getPropertyValue('src')) {
 
@@ -204,10 +191,14 @@ var critical = (function (exports) {
             }
         }
 
-        let rule;
+        performance.measure('node walking', 'nodeWalking');
+
         let css;
         let file = '';
         let inlineCount = -1;
+
+
+        performance.mark('rulesExtraction');
 
         loop1:
             for (let k = 0; k < allStylesLength; k++) {
@@ -257,6 +248,12 @@ var critical = (function (exports) {
                     css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {
 
                         one = one.trim();
+
+                        if (one.match(/^['"]?data:/)) {
+
+                            return all;
+                        }
+
                         one = one.replace(/^(['"])([^\1\s]+)\1/, '$2');
 
                         return 'url(' + resolve(one, files.get(rule.parentStyleSheet).base) + ')';
@@ -310,6 +307,8 @@ var critical = (function (exports) {
                 styles.add(css);
             }
 
+        performance.measure('rules extraction', 'rulesExtraction');
+
         const usedFonts = new Map;
 
         if (options.fonts) {
@@ -319,6 +318,8 @@ var critical = (function (exports) {
             let value;
             let font;
             let fontObject;
+
+            performance.mark('fontsExtraction');
 
             for (font of fonts) {
 
@@ -364,9 +365,21 @@ var critical = (function (exports) {
                     usedFonts.set(JSON.stringify(fontObject), fontObject);
                 }
             }
+
+            performance.measure('fonts extraction', 'fontsExtraction');
         }
 
-        return {styles: [...styles], fonts: [...usedFonts.values()]};
+        const stats = performance.getEntriesByType("measure").filter(entry => ['filter stylesheets', 'node walking', 'rules extraction', 'fonts extraction'].includes(entry.name)).map(entry => {
+
+            return {
+
+                name: entry.name,
+
+                duration: (entry.duration / 1000).toFixed(3) + 's'
+            }
+        });
+
+        return {styles: [...styles], fonts: [...usedFonts.values()], nodeCount, stats: {nodeCount, stats}};
     }
 
     /**
@@ -408,9 +421,9 @@ var critical = (function (exports) {
      * @param {string} filename
      * @return {Promise<{styles: string[], fonts: object[]}>}
      */
-    async function extractAndDownload(filename = 'critical.css') {
+    async function extractAndDownload(filename = 'critical.css', options = {}) {
 
-        return extract().then(async content => {
+        return extract(options).then(async content => {
             await download(content.styles, filename, 'text/css; charset=utf-8').then(async () => {
 
                 if (content.fonts.length > 0) {
@@ -425,6 +438,7 @@ var critical = (function (exports) {
 
     exports.download = extractAndDownload;
     exports.extract = extract;
+    exports.fontscript = fontscript;
 
     Object.defineProperty(exports, '__esModule', { value: true });
 

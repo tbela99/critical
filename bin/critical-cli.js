@@ -24,7 +24,7 @@
         type: 'string',
     }).option('filename', {
         alias: 'n',
-        description: 'Basename used for generated files',
+        description: 'prefix of the generated files',
         type: 'string',
     }).option('width', {
         alias: 'w',
@@ -41,6 +41,10 @@
     }).option('fonts', {
         alias: 'f',
         description: 'Generate javascript to load fonts dynamically',
+        type: 'boolean',
+    }).option('console', {
+        alias: 'l',
+        description: 'Log console errors from the page',
         type: 'boolean',
     }).option('container', {
         alias: 'c',

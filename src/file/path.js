@@ -6,7 +6,7 @@
  */
 export function resolve(path, from) {
 
-    if (path.substr(0, 5) === 'data:') {
+    if (path.match(/^['"]?data:/)) {
 
         return path;
     }
@@ -26,25 +26,5 @@ export function resolve(path, from) {
         return pathURL.toString();
     }
 
-    const base = baseURL.pathname.split('/');
-    const tokens = pathURL.pathname.split('/');
-
-    while (tokens.length > 0 && base.length > 0) {
-
-        if (tokens[0] != base[0]) {
-
-            break;
-        }
-
-        base.shift();
-        tokens.shift();
-    }
-
-    let length = base.length;
-    while (length-- > 1) {
-
-        tokens.unshift('..');
-    }
-
-    return tokens.join('/') + pathURL.search;
+    return pathURL.pathname + pathURL.search + pathURL.hash;
 }

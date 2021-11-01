@@ -21,12 +21,13 @@ import {size} from "./file/size";
  * - container: false
  * - output: 'output/'
  *
- * @returns {Promise<{fonts: string[], styles: object[]}>}
+ * @returns {Promise<{fonts: string[], styles: object[], stats: object[]}}>}
  */
 export async function critical(url, options = {}) {
 
     const styles = new Set;
     let fonts = new Set;
+    const stats = [];
 
     if (['"', "'"].includes(url.charAt(0))) {
 
@@ -191,7 +192,7 @@ export async function critical(url, options = {}) {
         if (options.console) {
 
             page.on('console', message =>
-                console.log(`[${shortUrl}]> ${message.type().substr(0, 4).replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
+                console.log(`[${shortUrl}]> ${message.type().substr(0, 5).replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
                 .on('pageerror', ({message}) => console.log(`[${shortUrl}]> ${message}.red`))
                 .on('requestfailed', request => {
 
@@ -201,6 +202,7 @@ export async function critical(url, options = {}) {
         }
 
         console.info(`[${shortUrl}]> open `.blue + url);
+
         await page.goto(url, {waitUntil: 'networkidle0', timeout: 0});
         await page.addScriptTag({url: script});
 
@@ -216,6 +218,7 @@ export async function critical(url, options = {}) {
 
         data.styles.forEach(line => styles.add(line));
         data.fonts.forEach(line => fonts.add(line));
+        stats.push({width: dimension.width, height: dimension.height, stats: data.stats});
 
         if (options.screenshot) {
 
@@ -284,5 +287,5 @@ export async function critical(url, options = {}) {
         });
     }
 
-    return {styles: [...styles], fonts: [...fonts]};
+    return {styles: [...styles], fonts: [...fonts], stats};
 }
