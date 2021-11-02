@@ -454,6 +454,8 @@ var critical = (function (exports) {
             const style = document.createElement('style');
             const script = document.createElement('script');
 
+            // add data-attribute
+            style.dataset.critical = true;
             style.textContent = result.styles.join('\n');
             document.head.append(style);
 

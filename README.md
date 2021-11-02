@@ -1,5 +1,7 @@
 # CRITICAL PATH GENERATOR
 
+![screenshot](https://raw.githubusercontent.com/tbela99/critical/master/screenshot.png)
+
 Critical path generator tools. Provides a web browser script, a node script and a command line tool.
 
 ## Web browser script
@@ -25,7 +27,7 @@ critical.extract({
 
 - options: _object_
   - fonts: _bool?_ generate Javascript to load web fonts dynamically
-  - html: _bool?_ generate HTML pages for each viewport
+  - html: _bool?_ generate an HTML page containing inlined critical css
   - signal: _AbortSignal?_ abort critical extraction using AbortSignal
 
 ### Limitations
@@ -102,7 +104,7 @@ urls.forEach(url => {
   - height: _int_. viewport height. default _600_
   - dimensions: _array_ or _string_. array of viewports. this takes precedence over height and width. viewports can be specified as objects with width and height property or a string.
   - container: _bool_. turn off additional features required to run inside a container
-  - html: _bool_. create an HTML page for each dimension. each page contains an inlined critical css for the corresponding viewport
+  - html: _bool_. generate an HTML page containing inlined critical css
   - output: _string_. change output directory. default _'./output/'_
 
 ## Command line script
@@ -126,6 +128,9 @@ Options:
   -f, --fonts       Generate javascript to load fonts dynamically      [boolean]
   -c, --container   Disable additional settings to run inside a container
                                                                        [boolean]
+   -p, --html        generate an HTML page containing inlined critical css
+                                                                       [boolean]
+
   -h, --help        Show help                                          [boolean]
 
 ```

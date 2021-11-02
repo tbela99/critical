@@ -55,7 +55,7 @@
 
         const styles = new Set;
         const stats = [];
-        const html = [];
+        let html = '';
         let fonts = new Set;
 
         if (['"', "'"].includes(url.charAt(0))) {
@@ -267,16 +267,9 @@
             data.fonts.forEach(line => fonts.add(line));
             stats.push({width: dimension.width, height: dimension.height, stats: data.stats});
 
-            if (options.html) {
+            if (options.html && html === '') {
 
-                html.push({width: dimension.width, height: dimension.height, html: data.html});
-                fs.writeFile(`${options.filename}_${dimension.width}x${dimension.height}.html`, data.html, function (error, data) {
-
-                    if (error) {
-
-                        console.error({error});
-                    }
-                });
+                html = data.html;
             }
 
             await page.close();
@@ -295,6 +288,24 @@
 
             console.info(`[${shortUrl}]> writing css at `.blue + cssFile.green + ' ['.green + size(output.length).green + ']'.green);
             fs.writeFile(cssFile, output, function (error, data) {
+
+                if (error) {
+
+                    console.error({error});
+                }
+            });
+        }
+
+        if (options.html && html !== '') {
+
+            const match = html.match(/<style data-critical="true">((.|[\r\n])*?)<\/style>/);
+
+            if (match) {
+
+                html = html.replace(match[0], `<style data-critical="true">${[...styles].join('\n')}</style>`);
+            }
+
+            fs.writeFile(`${options.filename}.html`, html, function (error, data) {
 
                 if (error) {
 

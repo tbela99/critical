@@ -46,7 +46,7 @@ urls.forEach(url => {
         ]
     }).then((results) => {
 
-        console.log(JSON.stringify([results.stats], null, 1));
+        // console.log(JSON.stringify([results.stats], null, 1));
         console.info('success!')
     });
 })

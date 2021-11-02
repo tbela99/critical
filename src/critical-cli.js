@@ -47,6 +47,10 @@ const _yargs = yargs(hideBin(process.argv)).command('url [url+] [options+]\nrun 
     alias: 'c',
     description: 'Disable additional settings to run inside a container',
     type: 'boolean',
+}).option('html', {
+    alias: 'p',
+    description: 'generate an HTML page containing inlined critical css',
+    type: 'boolean',
 }).help().alias('help', 'h');
 
 const options = _yargs.argv;
