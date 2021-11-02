@@ -43,7 +43,7 @@ export async function critical(url, options = {}) {
 
     options = Object.assign({
 
-        fonts: false,
+        fonts: true,
         headless: true,
         screenshot: false,
         console: true,
