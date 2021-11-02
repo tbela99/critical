@@ -419,15 +419,13 @@ export async function extract(options = {}) {
         // add data-attribute
         style.dataset.critical = true;
         style.textContent = result.styles.join('\n');
-        document.head.append(style);
+        document.head.insertBefore(style, document.querySelector('base')?.nextElementSibling);
 
         if (result.fonts.length > 0) {
 
             script.textContent = fontscript(result.fonts);
             document.head.append(script);
         }
-
-        (document.currentScript || document.scripts[document.scripts.length - 1]).remove();
 
         const doctype = document.doctype;
 

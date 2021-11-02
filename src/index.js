@@ -236,6 +236,7 @@ export async function critical(url, options = {}) {
 
             sc.textContent = script;
             document.body.append(sc);
+            sc.remove();
 
             return critical.extract(options).then(result => {
 
