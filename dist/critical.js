@@ -36,16 +36,17 @@
      *
      * @param {string} url
      * @param {object} options?
-     * - fonts: true,
-     * - headless: true,
-     * - console: true,
-     * - screenshot: false,
-     * - secure: false,
-     * - filename: '',
-     * - width: 800,
-     * - height: 600,
+     * - fonts: true
+     * - headless: true
+     * - console: true
+     * - screenshot: false
+     * - secure: false
+     * - filename: ''
+     * - width: 800
+     * - height: 600
      * - dimensions: []|string
      * - container: false
+     * - html: false
      * - output: 'output/'
      *
      * @returns {Promise<{styles: string[], fonts: object[], stats: object, html: string?}>}

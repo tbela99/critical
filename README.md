@@ -24,7 +24,9 @@ critical.extract({
 ### Options
 
 - options: _object_
-  - fonts: _bool_ generate Javascript to load web fonts dynamically
+  - fonts: _bool?_ generate Javascript to load web fonts dynamically
+  - html: _bool?_ generate HTML pages for each viewport
+  - signal: _AbortSignal?_ abort critical extraction using AbortSignal
 
 ### Limitations
 

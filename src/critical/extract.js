@@ -3,16 +3,13 @@ import {fontscript} from "./fontscript";
 
 /**
  * {Object} options
- * - {AbortSignal?} signal abort css extraction
- * - {bool?} fonts generate javascript font loading script
+ * - signal {AbortSignal?} abort css extraction
+ * - html {bool?} generate HTML for each viewport
+ * - fonts {bool?} generate javascript to download fonts
  *
  * @returns {Promise<{styles: string[], fonts: object[], stats: object, html: string?}>}
  */
 export async function extract(options = {}) {
-
-    options = Object.assign({
-        fonts: false
-    }, options);
 
     const document = window.document;
     const location = window.location;

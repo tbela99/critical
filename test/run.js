@@ -5,10 +5,8 @@ const {basename, resolve, dirname} = require("path");
 const urls = [
     // resolve(dirname(__filename) + '/media/index.html'),
     // 'https://github.com',
-    'https://ideabytes.com/',
-    // 'https://thehackernews.com/',
+    'https://thehackernews.com/',
     // 'https://www.linkedin.com',
-    // 'http://127.0.0.1:2080',
     // 'https://css-tricks.com/lodge/svg/09-svg-data-uris/'
 ];
 
