@@ -377,7 +377,7 @@ export async function extract(options = {}) {
             const base = document.createElement('base');
 
             base.href = location.protocol + '//' + location.host + location.pathname;
-            document.head.append(base)
+            document.head.insertBefore(base, document.querySelector('meta[charset]')?.nextElementSibling || document.head.firstChild)
         }
 
         Array.from(document.querySelectorAll('style,link[rel=stylsheet]')).forEach(node => {
@@ -428,7 +428,15 @@ export async function extract(options = {}) {
         }
 
         (document.currentScript || document.scripts[document.scripts.length - 1]).remove();
-        result.html = document.documentElement.outerHTML
+
+        const doctype = document.doctype;
+
+        result.html = `<!Doctype ${doctype.name}`
+            + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
+            + (doctype.systemId
+                ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
+                : ``)
+            + `>` + '\n' + document.documentElement.outerHTML
     }
 
     return result;
