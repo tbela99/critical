@@ -1,10 +1,12 @@
 
 const config = require('../dist/critical');
-const {basename} = require("path");
+const {basename, resolve, dirname} = require("path");
 
 const urls = [
+    // resolve(dirname(__filename) + '/media/index.html'),
     // 'https://github.com',
-    'https://thehackernews.com/',
+    'https://ideabytes.com/',
+    // 'https://thehackernews.com/',
     // 'https://www.linkedin.com',
     // 'http://127.0.0.1:2080',
     // 'https://css-tricks.com/lodge/svg/09-svg-data-uris/'
@@ -19,6 +21,7 @@ urls.forEach(url => {
         screenshot: true,
         console: true,
         secure: false,
+        html: true,
         filename: 'output/' + basename(url).
                         replace(/[?#].*$/, '').replace(/[^a-zA-Z0-9@_/-]+/g, '_') + '_critical.css',
         dimensions: [
@@ -45,7 +48,7 @@ urls.forEach(url => {
         ]
     }).then((results) => {
 
-        console.log(JSON.stringify(results.stats, null, 1));
+        console.log(JSON.stringify([results.stats], null, 1));
         console.info('success!')
     });
 })

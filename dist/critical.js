@@ -48,22 +48,28 @@
      * - container: false
      * - output: 'output/'
      *
-     * @returns {Promise<{fonts: string[], styles: object[], stats: object[]}}>}
+     * @returns {Promise<{styles: string[], fonts: object[], stats: object, html: string?}>}
      */
     async function critical(url, options = {}) {
 
         const styles = new Set;
-        let fonts = new Set;
         const stats = [];
+        const html = [];
+        let fonts = new Set;
 
         if (['"', "'"].includes(url.charAt(0))) {
 
             url = url.replace(/^(['"])([^\1\s]+)\1$/, '$2');
         }
 
+        if(!url.match(/^([a-zA-Z]+:)?\/\//)) {
+
+            url = 'file://' + (url.charAt(0) == '/' ? url : path.resolve(__dirname + '/' + url));
+        }
+
         options = Object.assign({
 
-            fonts: true,
+            fonts: false,
             headless: true,
             screenshot: false,
             console: true,
@@ -72,13 +78,14 @@
             width: 800,
             height: 600,
             container: false,
+            html: false,
             output: 'output/'
         }, options);
+        path.basename(options.filename);
 
-        let filename = path.basename(options.filename);
-        let theUrl = new URL(filename === '' ? url : filename, url);
+        let theUrl = new URL(url);
         let filePath = options.output;
-        let shortUrl = theUrl.protocol + '//' + theUrl.host + theUrl.pathname;
+        let shortUrl = (theUrl.protocol == 'file:' ? path.basename(theUrl.pathname) : theUrl.protocol + '//' + theUrl.host + theUrl.pathname);
 
         if (filePath.substr(-1) != '/') {
 
@@ -88,6 +95,10 @@
         if (theUrl.host !== '') {
 
             filePath += theUrl.host.replace(':', '@') + '/';
+        }
+        else {
+
+            filePath += 'local_files/';
         }
 
         if (theUrl.pathname != '/') {
@@ -99,6 +110,7 @@
         }
 
         filePath = filePath.replace(/[/]+$/, '');
+
         fs.mkdir(path.dirname(filePath), {recursive: true}, function (error, state) {
 
             if (error) {
@@ -140,20 +152,9 @@
             return a.width - b.width;
         });
 
-        if (!/^(https?:)\/\//.test(url)) {
-
-            url = 'file://' + path.resolve(url);
-        }
-
-        if (typeof btoa == 'undefined') {
-
-            var btoa = function (string) {
-
-                return Buffer.from(string, 'binary').toString('base64')
-            };
-        }
-
-        const script = 'data:text/javascript;base64, ' + btoa(fs.readFileSync(path.dirname(__filename) + '/browser.js').toString());
+        const script = fs.readFileSync(path.dirname(__filename) + '/browser.js').toString();
+        // const script = 'data:text/javascript;base64, ' + btoa(readFileSync(dirname(__filename) + '/browser.js').toString());
+        // const script = 'file://' + resolve(__dirname + '/browser.js');
         const launchOptions = {
             headless: options.headless,
             defaultViewport: {
@@ -219,7 +220,7 @@
             if (options.console) {
 
                 page.on('console', message =>
-                    console.log(`[${shortUrl}]> ${message.type().substr(0, 5).replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
+                    console.log(`[${shortUrl}]> ${message.type().replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
                     .on('pageerror', ({message}) => console.log(`[${shortUrl}]> ${message}.red`))
                     .on('requestfailed', request => {
 
@@ -230,22 +231,7 @@
 
             console.info(`[${shortUrl}]> open `.blue + url);
 
-            await page.goto(url, {waitUntil: 'networkidle0', timeout: 0});
-            await page.addScriptTag({url: script});
-
-            console.info(`[${shortUrl}]> collect critical data`.blue);
-            const data = await page.evaluate(() => {
-
-                return critical.extract().then(result => {
-
-                    result.fonts = result.fonts.map(font => JSON.stringify(font));
-                    return result;
-                })
-            });
-
-            data.styles.forEach(line => styles.add(line));
-            data.fonts.forEach(line => fonts.add(line));
-            stats.push({width: dimension.width, height: dimension.height, stats: data.stats});
+            await page.goto(url, {waitUntil: 'networkidle2', timeout: 0});
 
             if (options.screenshot) {
 
@@ -258,6 +244,38 @@
 
                 console.info(`[${shortUrl}]>  generating screenshot at `.blue + screenshot.path.green);
                 await page.screenshot(screenshot);
+            }
+
+            // await page.addScriptTag({url: script});
+            console.info(`[${shortUrl}]> collect critical data`.blue);
+            const data = await page.evaluate((options, script) => {
+
+                const sc = document.createElement('script');
+
+                sc.textContent = script;
+                document.body.append(sc);
+
+                return critical.extract(options).then(result => {
+
+                    result.fonts = result.fonts.map(font => JSON.stringify(font));
+                    return result;
+                })
+            }, options,script);
+
+            data.styles.forEach(line => styles.add(line));
+            data.fonts.forEach(line => fonts.add(line));
+            stats.push({width: dimension.width, height: dimension.height, stats: data.stats});
+
+            if (options.html) {
+
+                html.push({width: dimension.width, height: dimension.height, html: data.html});
+                fs.writeFile(`${options.filename}_${dimension.width}x${dimension.height}.html`, data.html, function (error, data) {
+
+                    if (error) {
+
+                        console.error({error});
+                    }
+                });
             }
 
             await page.close();
@@ -314,7 +332,7 @@
             });
         }
 
-        return {styles: [...styles], fonts: [...fonts], stats};
+        return {styles: [...styles], fonts: [...fonts], stats, html};
     }
 
     exports.critical = critical;

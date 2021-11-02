@@ -1,29 +1,6 @@
 var critical = (function (exports) {
     'use strict';
 
-    function matchesSelector(el, selector) {
-
-        let matchesSelector = el.matchesSelector || el.webkitMatchesSelector || el.mozMatchesSelector || el.msMatchesSelector;
-
-        if (matchesSelector) {
-            try {
-                return matchesSelector.call(el, selector);
-            } catch (e) {
-                return false;
-            }
-        } else {
-            let matches = el.ownerDocument.querySelectorAll(selector),
-                len = matches.length;
-
-            while (len && len--) {
-                if (matches[len] === el) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     /**
      * resolve to absolute for external urls, relative for same domain
      * @param {string} path
@@ -56,18 +33,29 @@ var critical = (function (exports) {
     }
 
     /**
+     *
+     * @param {string[]} fonts
+     */
+    function fontscript(fonts) {
+
+        return '/* font preloader script: ' + fonts.length + ' */\n"fonts" in document && ' + JSON.stringify([...fonts], null, 1) + '.forEach(font => new FontFace(font.fontFamily, font.src, font.properties).load().then(font => document.fonts.add(font)))'
+    }
+
+    /**
      * {Object} options
-     * - fonts: generate javascript font loading script
-     * @returns {Promise<{styles: string[], fonts: object[], stats: object}>}
+     * - {AbortSignal?} signal abort css extraction
+     * - {bool?} fonts generate javascript font loading script
+     *
+     * @returns {Promise<{styles: string[], fonts: object[], stats: object, html: string?}>}
      */
     async function extract(options = {}) {
 
         options = Object.assign({
-            // not implemented... yet
-            // inlineFonts: false,
-            fonts: true
+            fonts: false
         }, options);
 
+        const document = window.document;
+        const location = window.location;
         const styles = new Set;
         const excluded = ['all', 'print', ''];
         const allStylesheets = [];
@@ -81,6 +69,7 @@ var critical = (function (exports) {
         const fonts = new Set;
         const fontFamilies = new Set;
         const files = new Map;
+        const weakMap = new WeakMap;
         let nodeCount = 0;
         let k;
         let rule;
@@ -120,11 +109,17 @@ var critical = (function (exports) {
         }
 
         let node;
+        let rect;
         let allStylesLength = allStylesheets.length;
 
         performance.mark('nodeWalking');
 
         while ((node = walker.nextNode())) {
+
+            if (options?.signal?.aborted) {
+
+                return Promise.reject('Aborted');
+            }
 
             if (['SCRIPT', 'LINK', 'HEAD', 'META', 'TITLE', 'NOSCRIPT'].includes(node.tagName)) {
 
@@ -132,7 +127,7 @@ var critical = (function (exports) {
             }
 
             nodeCount++;
-            let rect = node.getBoundingClientRect();
+            rect = node.getBoundingClientRect();
 
             if (rect.top < height) {
 
@@ -143,9 +138,38 @@ var critical = (function (exports) {
                         continue;
                     }
 
+                    weakMap.set(allStylesheets[k].rule, 1);
+
                     if (allStylesheets[k].rule instanceof CSSStyleRule) {
 
-                        if (matchesSelector(node, allStylesheets[k].rule.selectorText)) {
+                        let selector = allStylesheets[k].rule.selectorText;
+                        let match;
+
+                        // detect pseudo selectors
+                        if (selector.match(/(^|,|\s)::?((before)|(after))/)) {
+
+                            match = true;
+                        }
+                        else {
+
+                            if (selector.match(/::?((before)|(after))/)) {
+
+                                selector = selector.replace(/::?((before)|(after))\s*((,)|$)/g, '$5');
+                            }
+
+                            try {
+
+                                match = node.matches(selector);
+                            }
+
+                            catch (e) {
+
+                                console.log(`${selector} ---- ${allStylesheets[k].rule.selectorText} `);
+                                match = node.matches(allStylesheets[k].rule.selectorText);
+                            }
+                        }
+
+                        if (match) {
 
                             allStylesheets[k].match = true;
 
@@ -157,28 +181,35 @@ var critical = (function (exports) {
 
                     } else if (allStylesheets[k].rule instanceof CSSMediaRule || allStylesheets[k].rule instanceof CSSImportRule) {
 
-                        if (allStylesheets[k].rule.media.mediaText !== '' && !window.matchMedia(allStylesheets[k].rule.media.mediaText).matches) {
+                        if (allStylesheets[k].rule.media.mediaText === 'print' || (allStylesheets[k].rule.media.mediaText !== '' && !window.matchMedia(allStylesheets[k].rule.media.mediaText).matches)) {
                             continue;
                         }
 
-                        const rules = [];
-                        const sheet = allStylesheets[k].rule.cssRules || allStylesheets[k].rule.rules;
-                        let l;
+                        try {
 
-                        for (l = 0; l < sheet.length; l++) {
+                            const rule = allStylesheets[k].rule;
+                            const rules = [];
+                            const sheet = rule instanceof CSSImportRule ? rule.styleSheet.cssRules || rule.styleSheet.rules : rule.cssRules || rule.rules;
 
-                            rules.push({rule:  sheet[l], match: false});
+                            for (let l = 0; l < sheet.length; l++) {
+
+                                if (!weakMap.has(sheet[l])) {
+
+                                    rules.push({rule:  sheet[l], match: false});
+                                }
+                            }
+
+                            if (rules.length > 0) {
+
+                                allStylesheets.splice.apply(allStylesheets, [k + 1, 0].concat(rules));
+                                allStylesLength = allStylesheets.length;
+                            }
                         }
 
-                        rules.unshift(k + 1, 0);
-                        allStylesheets.splice.apply(allStylesheets, rules);
-                        allStylesLength = allStylesheets.length;
+                        catch (e) {
 
-                        if (allStylesheets[k].rule instanceof CSSImportRule) {
-
-                            styles.add('/* @import: ' + allStylesheets[k].rule.href + ' from ' + (allStylesheets[k].rule.parentStyleSheet.href || `inline #${inlineCount}`) + ' */');
+                            console.error(JSON.stringify({'message': e.message, stylesheet: rule.href}, null, 1));
                         }
-
                     }
                     else if (allStylesheets[k].rule instanceof CSSFontFaceRule) {
 
@@ -196,7 +227,6 @@ var critical = (function (exports) {
         let css;
         let file = '';
         let inlineCount = -1;
-
 
         performance.mark('rulesExtraction');
 
@@ -234,8 +264,8 @@ var critical = (function (exports) {
                         styles.add('/* file: ' + files.get(rule.parentStyleSheet).file + ' */');
                     } catch (e) {
 
-                        console.error(e.message);
-                        console.error(rule.parentStyleSheet);
+                        console.error(JSON.stringify(e.message, null, 1));
+                        console.error(JSON.stringify(rule?.parentStyleSheet?.href, null, 1));
                     }
                 }
 
@@ -379,7 +409,68 @@ var critical = (function (exports) {
             }
         });
 
-        return {styles: [...styles], fonts: [...usedFonts.values()], nodeCount, stats: {nodeCount, stats}};
+        const result = {styles: [...styles], fonts: [...usedFonts.values()], nodeCount, stats: {nodeCount, stats}};
+
+        if (options.html) {
+
+            if (!document.querySelector('base')) {
+
+                const base = document.createElement('base');
+
+                base.href = location.protocol + '//' + location.host + location.pathname;
+                document.head.append(base);
+            }
+
+            Array.from(document.querySelectorAll('style,link[rel=stylsheet]')).forEach(node => {
+
+                document.body.append(node);
+
+                if (node.tagName == 'link') {
+
+                    if (node.media == 'print') {
+
+                        return
+                    }
+
+                    if (node.hasAttribute('media')) {
+
+                        node.setAttribute('data-media', node.media);
+                    }
+
+                    node.media = 'print';
+                    node.addEventListener('load', function () {
+
+                        if (!node.hasAttribute('data-media')) {
+
+                            node.removeAttribute('media');
+                        }
+                        else {
+
+                            node.media = node.dataset.media;
+                            node.removeAttribute('data-media');
+                        }
+
+                    }, {once: true});
+                }
+            });
+
+            const style = document.createElement('style');
+            const script = document.createElement('script');
+
+            style.textContent = result.styles.join('\n');
+            document.head.append(style);
+
+            if (result.fonts.length > 0) {
+
+                script.textContent = fontscript(result.fonts);
+                document.head.append(script);
+            }
+
+            (document.currentScript || document.scripts[document.scripts.length - 1]).remove();
+            result.html = document.documentElement.outerHTML;
+        }
+
+        return result;
     }
 
     /**
@@ -405,15 +496,6 @@ var critical = (function (exports) {
         URL.revokeObjectURL(url);
 
         return content;
-    }
-
-    /**
-     *
-     * @param {string[]} fonts
-     */
-    function fontscript(fonts) {
-
-        return '/* font preloader script: ' + fonts.length + ' */\n"fonts" in document && ' + JSON.stringify([...fonts], null, 1) + '.forEach(font => new FontFace(font.fontFamily, font.src, font.properties).load().then(font => document.fonts.add(font)))'
     }
 
     /**

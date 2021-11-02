@@ -100,6 +100,7 @@ urls.forEach(url => {
   - height: _int_. viewport height. default _600_
   - dimensions: _array_ or _string_. array of viewports. this takes precedence over height and width. viewports can be specified as objects with width and height property or a string.
   - container: _bool_. turn off additional features required to run inside a container
+  - html: _bool_. create an HTML page for each dimension. each page contains an inlined critical css for the corresponding viewport
   - output: _string_. change output directory. default _'./output/'_
 
 ## Command line script

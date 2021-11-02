@@ -45,7 +45,7 @@
 </div>
 <script src='../../dist/browser.js'></script>
 <script>
-   critical.extract('critical').then(content => console.log({content}))
+   critical.extract({html: true}).then(content => console.log({content}))
 </script>
 </body>
 </html>
