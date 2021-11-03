@@ -418,11 +418,11 @@ var critical = (function (exports) {
                 document.head.insertBefore(base, document.querySelector('meta[charset]')?.nextElementSibling || document.head.firstChild);
             }
 
-            Array.from(document.querySelectorAll('style,link[rel=stylsheet]')).forEach(node => {
+            Array.from(document.querySelectorAll('style,link[rel=stylesheet]')).forEach(node => {
 
                 document.body.append(node);
 
-                if (node.tagName == 'link') {
+                if (node.tagName == 'LINK') {
 
                     if (node.media == 'print') {
 
@@ -435,32 +435,41 @@ var critical = (function (exports) {
                     }
 
                     node.media = 'print';
-                    node.addEventListener('load', function () {
-
-                        if (!node.hasAttribute('data-media')) {
-
-                            node.removeAttribute('media');
-                        }
-                        else {
-
-                            node.media = node.dataset.media;
-                            node.removeAttribute('data-media');
-                        }
-
-                    }, {once: true});
+                    node.dataset.async = '';
                 }
             });
 
-            const style = document.createElement('style');
             const script = document.createElement('script');
 
+            script.textContent = `
+        window.addEventListener('DOMContentLoaded', () => Array.from(document.querySelectorAll('link[data-async]')).forEach(node => {
+
+                if(!node.hasAttribute('data-media')) {
+                    node.removeAttribute('media');
+                }
+                else {
+                    node.media=node.dataset.media;
+                    node.removeAttribute('data-media')
+                }
+                
+                node.removeAttribute('data-async');
+        }))`;
+
+            document.head.append(script);
+
             // add data-attribute
+            const style = document.createElement('style');
             style.dataset.critical = true;
             style.textContent = result.styles.join('\n');
-            document.head.insertBefore(style, document.querySelector('base')?.nextElementSibling);
+
+            if (style.textContent.trim() !== '') {
+
+                document.head.insertBefore(style, document.querySelector('base')?.nextElementSibling);
+            }
 
             if (result.fonts.length > 0) {
 
+                const script = document.createElement('script');
                 script.textContent = fontscript(result.fonts);
                 document.head.append(script);
             }
