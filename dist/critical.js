@@ -1,12 +1,28 @@
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('puppeteer/lib/cjs/puppeteer/node-puppeteer-core'), require('path'), require('fs'), require('colors')) :
-    typeof define === 'function' && define.amd ? define(['exports', 'puppeteer/lib/cjs/puppeteer/node-puppeteer-core', 'path', 'fs', 'colors'], factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.critical = {}, global.puppeteer, global.path, global.fs));
-}(this, (function (exports, puppeteer, path, fs) { 'use strict';
+    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('playwright'), require('path'), require('fs'), require('colors')) :
+    typeof define === 'function' && define.amd ? define(['exports', 'playwright', 'path', 'fs', 'colors'], factory) :
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.critical = {}, global.playwright, global.path, global.fs));
+})(this, (function (exports, playwright, path, fs) { 'use strict';
 
-    function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
+    function _interopNamespace(e) {
+        if (e && e.__esModule) return e;
+        var n = Object.create(null);
+        if (e) {
+            Object.keys(e).forEach(function (k) {
+                if (k !== 'default') {
+                    var d = Object.getOwnPropertyDescriptor(e, k);
+                    Object.defineProperty(n, k, d.get ? d : {
+                        enumerable: true,
+                        get: function () { return e[k]; }
+                    });
+                }
+            });
+        }
+        n["default"] = e;
+        return Object.freeze(n);
+    }
 
-    var puppeteer__default = /*#__PURE__*/_interopDefaultLegacy(puppeteer);
+    var playwright__namespace = /*#__PURE__*/_interopNamespace(playwright);
 
     /**
      *
@@ -57,6 +73,7 @@
         const stats = [];
         let html = '';
         let fonts = new Set;
+        const chromium = (['chromium', 'firefox', 'webkit', 'edge', 'chrome'].includes(options.browser) && playwright__namespace[options.browser]) || playwright__namespace.chromium;
 
         if (['"', "'"].includes(url.charAt(0))) {
 
@@ -76,8 +93,6 @@
             console: true,
             secure: false,
             filename: '',
-            width: 800,
-            height: 600,
             container: false,
             html: false,
             output: 'output/'
@@ -122,14 +137,11 @@
 
         options.filename = filePath;
 
-        let dimensions = 'dimensions' in options ? options.dimensions : {
-            width: options.width || 800,
-            height: options.height || 600
-        };
+        let dimensions = 'dimensions' in options ? options.dimensions : ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'];
 
         if (!Array.isArray(dimensions)) {
 
-            dimensions = [dimensions];
+            dimensions = dimensions.split(/\s/);
         }
 
         dimensions = dimensions.map(dimension => {
@@ -158,6 +170,7 @@
         // const script = 'file://' + resolve(__dirname + '/browser.js');
         const launchOptions = {
             headless: options.headless,
+            bypassCSP: !options.secure,
             defaultViewport: {
                 isMobile: true,
                 isLandscape: false,
@@ -203,20 +216,23 @@
                 );
             }
 
-            console.info(`[${shortUrl}]> selected browser `.blue + puppeteer__default['default'].product.green);
+            console.info(`[${shortUrl}]> selected browser `.blue + chromium.name().green);
             console.info(`[${shortUrl}]> set viewport to `.blue + `${dimension.width}x${dimension.height}`.green);
 
-            const browser = await puppeteer__default['default'].launch(launchOptions);
+            const browser = await chromium.launch(launchOptions);
 
-            const pages = await browser.pages();
-            if (pages.length === 0) pages.push(await browser.newPage());
+            // const pages = browser.pages();
+            // if (pages.length === 0) pages.push(await browser.newPage());
+            //
+            // const page = pages[0];
+            const context = await browser.newContext({
+                bypassCSP: !options.secure,
+                viewport: dimension
+            });
+            const page = await context.newPage();
+            // const page = await browser.newPage();
 
-            const page = pages[0];
-
-            if (!options.secure) {
-
-                await page.setBypassCSP(true);
-            }
+            if (!options.secure) ;
 
             if (options.console) {
 
@@ -232,7 +248,7 @@
 
             console.info(`[${shortUrl}]> open `.blue + url);
 
-            await page.goto(url, {waitUntil: 'networkidle2', timeout: 0});
+            await page.goto(url, {waitUntil: 'networkidle', timeout: 0});
 
             if (options.screenshot) {
 
@@ -249,20 +265,20 @@
 
             // await page.addScriptTag({url: script});
             console.info(`[${shortUrl}]> collect critical data`.blue);
-            const data = await page.evaluate((options, script) => {
+            const data = await page.evaluate(param => {
 
                 const sc = document.createElement('script');
 
-                sc.textContent = script;
+                sc.textContent = param.script;
                 document.body.append(sc);
                 sc.remove();
 
-                return critical.extract(options).then(result => {
+                return window.critical.extract(param.options).then(result => {
 
                     result.fonts = result.fonts.map(font => JSON.stringify(font));
                     return result;
                 })
-            }, options,script);
+            }, {options, script});
 
             data.styles.forEach(line => styles.add(line));
             data.fonts.forEach(line => fonts.add(line));
@@ -352,4 +368,4 @@
 
     Object.defineProperty(exports, '__esModule', { value: true });
 
-})));
+}));

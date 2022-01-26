@@ -10,45 +10,57 @@
         alias: 't',
         description: 'enable or disable headless mode',
         type: 'boolean',
+        defaultDescription: "true"
+    }).option('browser', {
+        alias: 'b',
+        default: 'chromium',
+        description: 'browser to use',
+        choices: ['chromium', 'firefox', 'webkit', 'edge', 'chrome'],
+        defaultDescription: "chromium",
+        type: 'string'
     }).option('screenshot', {
         alias: 'i',
         description: 'Generate screenshots',
-        type: 'boolean',
+        type: 'boolean'
     }).option('secure', {
         alias: 's',
         description: 'enable or disable security settings such as CSP and same origin policy',
-        type: 'boolean',
+        type: 'boolean'
     }).option('output', {
         alias: 'o',
         description: 'Output directory',
-        type: 'string',
+        type: 'string'
     }).option('filename', {
         alias: 'n',
         description: 'prefix of the generated files',
-        type: 'string',
+        type: 'string'
     }).option('width', {
         alias: 'w',
         description: 'Viewport width',
-        type: 'number',
+        type: 'number'
     }).option('height', {
         alias: 'a',
         description: 'Viewport height',
-        type: 'number',
+        type: 'number'
     }).option('dimensions', {
         alias: 'd',
-        description: 'Array of viewports, override height/width settings',
         type: 'array',
+        description: 'Array of viewports, override height/width settings',
+        // default: ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'],
+        defaultDescription: "'1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'"
     }).option('fonts', {
         alias: 'f',
         description: 'Generate javascript to load fonts dynamically',
         type: 'boolean',
+        defaultDescription: "true"
     }).option('console', {
         alias: 'l',
-        description: 'Log console errors from the page',
+        description: 'Show console messages from the browser',
         type: 'boolean',
+        defaultDescription: "true"
     }).option('container', {
         alias: 'c',
-        description: 'Disable additional settings to run inside a container',
+        description: 'Disable additional security settings to run inside a container',
         type: 'boolean',
     }).option('html', {
         alias: 'p',
@@ -91,4 +103,4 @@
         })(url));
     }
 
-}());
+})();
