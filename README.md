@@ -118,7 +118,7 @@ Usage
 $ node ./bin/critical-cli.js url [url2 url3 ...] [options]
 
 Options:
-   -t, --headless    enable or disable headless mode    [boolean] [default: true]
+  -t, --headless    enable or disable headless mode    [boolean] [default: true]
   -b, --browser     browser to use
            [string] [choices: "chromium", "firefox", "webkit", "edge", "chrome"]
                                                              [default: chromium]
