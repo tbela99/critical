@@ -41,52 +41,26 @@ Generate critical CSS path from your nodejs script using puppeteer
 
 ```javascript
 
-const config = require('./dist/critical');
-const {basename} = require("path");
-
+const {critical} =  require("@tbela99/critical");
 const urls = [
-    'http://github.com'
+  'http://github.com',
+  'https://docs.npmjs.com/cli/v8/configuring-npm/package-json#directories'
 ];
 
 urls.forEach(url => {
 
-    config.critical(url, {
-        console: true,
-        // product: 'firefox',
-        // headless: false,
-        // screenshot: true,
-        secure: false,
-        filename: 'output/' + basename(url).
-                        replace(/[?#].*$/, '').replace(/[^a-zA-Z0-9@_/-]+/g, '_') + '_critical.css',
-        // dimensions can be specified as an array of string or object
-        // dimensions: ['1400x900', '1200x675', '992x558'],       
-        dimensions: [
-            {
-                width: 1400,
-                height: 900
-            },
-            {
-                width: 1200,
-                height: 675
-            },
-            {
-                width: 992,
-                height: 558
-            },
-            {
-                width: 768,
-                height: 480
-            },
-            {
-                width: 576,
-                height: 320
-            }
-        ]
-    }).then((results) => {
+  critical(url, {
+    html: false,
+    console: true,
+    screenshot: true,
+    secure: false,
+    // dimensions can be specified as an array of string or object
+    dimensions: ['1400x900', '1200x675', '992x558']
+  }).then((results) => {
 
-      // print extracted CSS
-      console.log(results.styles.join('\n'));
-    });
+    // print extracted CSS
+    console.log(results.styles.join('\n'));
+  });
 })
 
 ```
@@ -153,5 +127,5 @@ Options:
 
 ```shell
 
-$ node ./bin/critical-cli.js https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768'
+$ critical-cli https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768'
 ```

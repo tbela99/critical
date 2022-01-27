@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "colors": "^1.4.0",
-    "playwright": "^1.18.0"
+    "playwright": "^1.18.0",
+    "yargs": "^17.3.1"
   },
   "scripts": {
     "test": "node test/run.js",
@@ -9,8 +10,9 @@
   },
   "name": "@tbela99/critical",
   "description": "Extract critical CSS from HTML pages to enable instantaneous rendering",
-  "version": "0.1.0",
-  "main": "src/index.js",
+  "version": "0.1.1",
+  "main": "dist/critical.js",
+  "browser": "dist/browser.js",
   "directories": {
     "test": "test"
   },
@@ -34,7 +36,6 @@
   },
   "devDependencies": {
     "rollup": "^2.66.1",
-    "rollup-plugin-terser": "^7.0.2",
-    "yargs": "^17.3.1"
+    "rollup-plugin-terser": "^7.0.2"
   }
 }
