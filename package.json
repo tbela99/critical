@@ -10,7 +10,7 @@
   },
   "name": "@tbela99/critical",
   "description": "Extract critical CSS from HTML pages to enable instantaneous rendering",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "main": "dist/critical.js",
   "browser": "dist/browser.js",
   "directories": {
