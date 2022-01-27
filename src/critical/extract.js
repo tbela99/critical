@@ -310,6 +310,7 @@ export async function extract(options = {}) {
         let value;
         let font;
         let fontObject;
+        let src;
 
         performance.mark('fontsExtraction');
 
@@ -320,13 +321,25 @@ export async function extract(options = {}) {
                 return fontFamilies.has(token.replace(/(['"])([^\1\s]+)\1/, '$2'));
             })) {
 
+                src = font.style.getPropertyValue('src');
+
+                if (!src) {
+
+                    continue;
+                }
+
                 fontObject = {
                     'fontFamily': font.style.getPropertyValue('font-family').replace(/(['"])([^\1\s]+)\1/, '$2'),
-                    src: font.style.getPropertyValue('src').replace(/(^|[,\s*])local\([^)]+\)\s*,?\s*?/g, '').replace(/url\(([^)%\s]+)\)([^,]*)(,?)\s*/g, (all, one, two, three) => {
+                    src: src.replace(/(^|[,\s*])local\([^)]+\)\s*,?\s*?/g, '').replace(/url\(([^)%\s]+)\)([^,]*)(,?)\s*/g, (all, one, two, three) => {
 
                         one = one.replace(/(['"])([^\1\s]+)\1/, '$2');
 
                         if (!files.has(font.parentStyleSheet)) {
+
+                            if (!font.parentStyleSheet.href) {
+
+                                return all;
+                            }
 
                             files.set(font.parentStyleSheet, {
 

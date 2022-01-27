@@ -54,11 +54,11 @@ export async function critical(url, options = {}) {
         html: false,
         output: 'output/'
     }, options);
-    basename(options.filename);
 
     let theUrl = new URL(url);
     let filePath = options.output;
     let shortUrl = (theUrl.protocol == 'file:' ? basename(theUrl.pathname) : theUrl.protocol + '//' + theUrl.host + theUrl.pathname);
+    let dimensions;
 
     if (filePath.substr(-1) != '/') {
 
@@ -94,11 +94,24 @@ export async function critical(url, options = {}) {
 
     options.filename = filePath;
 
-    let dimensions = 'dimensions' in options ? options.dimensions : ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'];
+    if ('dimensions' in options) {
 
-    if (!Array.isArray(dimensions)) {
+        dimensions = options.dimensions;
+    }
 
-        dimensions = dimensions.split(/\s/);
+    else {
+
+        dimensions = !isNaN(options.width) && !isNaN(options.height) ? [{width: options.width, height: +options.height}] : ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'];
+    }
+
+
+    if (typeof dimensions == 'string') {
+
+        dimensions = dimensions.split(/\s/)
+    }
+    else if (!Array.isArray(dimensions)) {
+
+        dimensions = [dimensions];
     }
 
     dimensions = dimensions.map(dimension => {
@@ -145,12 +158,12 @@ export async function critical(url, options = {}) {
         ignoreDefaultArgs: ['--enable-automation']
     };
 
-    const executablePath = process.env.CHROMIUM_PATH;
-
-    if (executablePath) {
-
-        launchOptions.executablePath = executablePath
-    }
+    // const executablePath = process.env.CHROMIUM_PATH;
+    //
+    // if (executablePath) {
+    //
+    //     launchOptions.executablePath = executablePath
+    // }
 
     for (let dimension of dimensions) {
 
@@ -195,12 +208,6 @@ export async function critical(url, options = {}) {
             viewport: dimension
         });
         const page = await context.newPage();
-        // const page = await browser.newPage();
-
-        if (!options.secure) {
-
-            // await page.setBypassCSP(true);
-        }
 
         if (options.console) {
 
@@ -241,7 +248,7 @@ export async function critical(url, options = {}) {
             document.body.append(sc);
             sc.remove();
 
-            return window.critical.extract(param.options).then(result => {
+            return critical.extract(param.options).then(result => {
 
                 result.fonts = result.fonts.map(font => JSON.stringify(font));
                 return result;

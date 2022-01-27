@@ -3,7 +3,7 @@ const yargs = require('yargs');
 const {hideBin} = require('yargs/helpers');
 const colors = require('colors');
 
-const _yargs = yargs(hideBin(process.argv)).command('url [url+] [options+]\nrun the command line tools', 'Example: node critical-cli.js -d 800x600 -d 1024x768 -i https://facebook.com').option('headless', {
+const _yargs = yargs(hideBin(process.argv)).command('url [url+] [options+]\nrun the command line tools', 'Example: critical-cli -d 800x600 -d 1024x768 -i https://facebook.com').option('headless', {
     alias: 't',
     description: 'enable or disable headless mode',
     type: 'boolean',
@@ -42,7 +42,7 @@ const _yargs = yargs(hideBin(process.argv)).command('url [url+] [options+]\nrun 
 }).option('dimensions', {
     alias: 'd',
     type: 'array',
-    description: 'Array of viewports, override height/width settings',
+        description: 'Array of viewports, override height/width settings',
     // default: ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'],
     defaultDescription: "'1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'"
 }).option('fonts', {
@@ -94,8 +94,7 @@ for (let url of urls) {
 
         return (error) => {
 
-            console.error(`failed to process ${url}`);
-            console.error(JSON.stringify(error, null, 1));
+            console.error(error);
         }
     })(url));
 }

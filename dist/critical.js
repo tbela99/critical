@@ -97,11 +97,11 @@
             html: false,
             output: 'output/'
         }, options);
-        path.basename(options.filename);
 
         let theUrl = new URL(url);
         let filePath = options.output;
         let shortUrl = (theUrl.protocol == 'file:' ? path.basename(theUrl.pathname) : theUrl.protocol + '//' + theUrl.host + theUrl.pathname);
+        let dimensions;
 
         if (filePath.substr(-1) != '/') {
 
@@ -137,11 +137,24 @@
 
         options.filename = filePath;
 
-        let dimensions = 'dimensions' in options ? options.dimensions : ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'];
+        if ('dimensions' in options) {
 
-        if (!Array.isArray(dimensions)) {
+            dimensions = options.dimensions;
+        }
+
+        else {
+
+            dimensions = !isNaN(options.width) && !isNaN(options.height) ? [{width: options.width, height: +options.height}] : ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'];
+        }
+
+
+        if (typeof dimensions == 'string') {
 
             dimensions = dimensions.split(/\s/);
+        }
+        else if (!Array.isArray(dimensions)) {
+
+            dimensions = [dimensions];
         }
 
         dimensions = dimensions.map(dimension => {
@@ -180,12 +193,12 @@
             ignoreDefaultArgs: ['--enable-automation']
         };
 
-        const executablePath = process.env.CHROMIUM_PATH;
-
-        if (executablePath) {
-
-            launchOptions.executablePath = executablePath;
-        }
+        // const executablePath = process.env.CHROMIUM_PATH;
+        //
+        // if (executablePath) {
+        //
+        //     launchOptions.executablePath = executablePath
+        // }
 
         for (let dimension of dimensions) {
 
@@ -230,9 +243,6 @@
                 viewport: dimension
             });
             const page = await context.newPage();
-            // const page = await browser.newPage();
-
-            if (!options.secure) ;
 
             if (options.console) {
 
@@ -273,7 +283,7 @@
                 document.body.append(sc);
                 sc.remove();
 
-                return window.critical.extract(param.options).then(result => {
+                return critical.extract(param.options).then(result => {
 
                     result.fonts = result.fonts.map(font => JSON.stringify(font));
                     return result;

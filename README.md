@@ -111,11 +111,17 @@ urls.forEach(url => {
 
 ## Command line script
 
+when installed globally, it is available as _critical-cli_
+
+```bash
+$ sudo node install -g @tbela99/critical
+$ critical-cli -i http://google.com
+```
+
 Usage
 
 ```shell
-
-$ node ./bin/critical-cli.js url [url2 url3 ...] [options]
+$ critical-cli url [url2 url3 ...] [options]
 
 Options:
   -t, --headless    enable or disable headless mode    [boolean] [default: true]
