@@ -41,52 +41,26 @@ Generate critical CSS path from your nodejs script using puppeteer
 
 ```javascript
 
-const config = require('./dist/critical');
-const {basename} = require("path");
-
+const {critical} =  require("@tbela99/critical");
 const urls = [
-    'http://github.com'
+  'http://github.com',
+  'https://docs.npmjs.com/cli/v8/configuring-npm/package-json#directories'
 ];
 
 urls.forEach(url => {
 
-    config.critical(url, {
-        console: true,
-        // product: 'firefox',
-        // headless: false,
-        // screenshot: true,
-        secure: false,
-        filename: 'output/' + basename(url).
-                        replace(/[?#].*$/, '').replace(/[^a-zA-Z0-9@_/-]+/g, '_') + '_critical.css',
-        // dimensions can be specified as an array of string or object
-        // dimensions: ['1400x900', '1200x675', '992x558'],       
-        dimensions: [
-            {
-                width: 1400,
-                height: 900
-            },
-            {
-                width: 1200,
-                height: 675
-            },
-            {
-                width: 992,
-                height: 558
-            },
-            {
-                width: 768,
-                height: 480
-            },
-            {
-                width: 576,
-                height: 320
-            }
-        ]
-    }).then((results) => {
+  critical(url, {
+    html: false,
+    console: true,
+    screenshot: true,
+    secure: false,
+    // dimensions can be specified as an array of string or object
+    dimensions: ['1400x900', '1200x675', '992x558']
+  }).then((results) => {
 
-      // print extracted CSS
-      console.log(results.styles.join('\n'));
-    });
+    // print extracted CSS
+    console.log(results.styles.join('\n'));
+  });
 })
 
 ```
@@ -95,6 +69,8 @@ urls.forEach(url => {
 
 - options: _object_
   - headless: _bool_. start puppeteer in headless mode. default _true_
+  - browser: _string_. browser to use [choices: "chromium", "firefox", "webkit", "edge", "chrome"]
+    default _"chromium"_
   - fonts: _bool_. generate javascript to load web fonts. default _true_
   - screenshot: _bool_. generate screenshot for each viewport mentioned. default _false_
   - console: _bool_. log console messages from the pages. default _true_
@@ -109,14 +85,23 @@ urls.forEach(url => {
 
 ## Command line script
 
+when installed globally, it is available as _critical-cli_
+
+```bash
+$ sudo node install -g @tbela99/critical
+$ critical-cli -i http://google.com
+```
+
 Usage
 
 ```shell
-
-$ node ./bin/critical-cli.js url [url2 url3 ...] [options]
+$ critical-cli url [url2 url3 ...] [options]
 
 Options:
-  -t, --headless    enable or disable headless mode                    [boolean]
+  -t, --headless    enable or disable headless mode    [boolean] [default: true]
+  -b, --browser     browser to use
+           [string] [choices: "chromium", "firefox", "webkit", "edge", "chrome"]
+                                                             [default: chromium]
   -i, --screenshot  Generate screenshots                               [boolean]
   -s, --secure      enable or disable security settings such as CSP and same
                     origin policy                                      [boolean]
@@ -124,20 +109,23 @@ Options:
   -n, --filename    prefix of the generated files                       [string]
   -w, --width       Viewport width                                      [number]
   -a, --height      Viewport height                                     [number]
-  -d, --dimensions  Array of viewports, override height/width settings   [array]
-  -f, --fonts       Generate javascript to load fonts dynamically      [boolean]
-  -c, --container   Disable additional settings to run inside a container
+  -d, --dimensions  Array of viewports, override height/width settings
+  [array] [default: '1920x1080', '1440x900', '1366x768', '1024x768', '768x1024',
+                                                                      '320x480']
+  -f, --fonts       Generate javascript to load fonts dynamically
+                                                       [boolean] [default: true]
+  -l, --console     Show console messages from the browser
+                                                       [boolean] [default: true]
+  -c, --container   Disable additional security settings to run inside a container
                                                                        [boolean]
-   -p, --html        generate an HTML page containing inlined critical css
+  -p, --html        generate an HTML page containing inlined critical css
                                                                        [boolean]
-
   -h, --help        Show help                                          [boolean]
-
 ```
 
 ### Example
 
 ```shell
 
-$ node ./bin/critical-cli.js https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768'
+$ critical-cli https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768'
 ```

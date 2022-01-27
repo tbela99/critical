@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer/lib/cjs/puppeteer/node-puppeteer-core";
+import * as playwright from "playwright";
 import {resolve, dirname, basename} from "path";
 import {mkdir, readFileSync, writeFile} from "fs";
 import {colors} from "colors";
@@ -30,6 +30,7 @@ export async function critical(url, options = {}) {
     const stats = [];
     let html = '';
     let fonts = new Set;
+    const chromium = (['chromium', 'firefox', 'webkit', 'edge', 'chrome'].includes(options.browser) && playwright[options.browser]) || playwright.chromium;
 
     if (['"', "'"].includes(url.charAt(0))) {
 
@@ -49,17 +50,15 @@ export async function critical(url, options = {}) {
         console: true,
         secure: false,
         filename: '',
-        width: 800,
-        height: 600,
         container: false,
         html: false,
         output: 'output/'
     }, options);
-    basename(options.filename);
 
     let theUrl = new URL(url);
     let filePath = options.output;
     let shortUrl = (theUrl.protocol == 'file:' ? basename(theUrl.pathname) : theUrl.protocol + '//' + theUrl.host + theUrl.pathname);
+    let dimensions;
 
     if (filePath.substr(-1) != '/') {
 
@@ -95,12 +94,22 @@ export async function critical(url, options = {}) {
 
     options.filename = filePath;
 
-    let dimensions = 'dimensions' in options ? options.dimensions : {
-        width: options.width || 800,
-        height: options.height || 600
-    };
+    if ('dimensions' in options) {
 
-    if (!Array.isArray(dimensions)) {
+        dimensions = options.dimensions;
+    }
+
+    else {
+
+        dimensions = !isNaN(options.width) && !isNaN(options.height) ? [{width: options.width, height: +options.height}] : ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'];
+    }
+
+
+    if (typeof dimensions == 'string') {
+
+        dimensions = dimensions.split(/\s/)
+    }
+    else if (!Array.isArray(dimensions)) {
 
         dimensions = [dimensions];
     }
@@ -139,6 +148,7 @@ export async function critical(url, options = {}) {
     // const script = 'file://' + resolve(__dirname + '/browser.js');
     const launchOptions = {
         headless: options.headless,
+        bypassCSP: !options.secure,
         defaultViewport: {
             isMobile: true,
             isLandscape: false,
@@ -148,12 +158,12 @@ export async function critical(url, options = {}) {
         ignoreDefaultArgs: ['--enable-automation']
     };
 
-    const executablePath = process.env.CHROMIUM_PATH;
-
-    if (executablePath) {
-
-        launchOptions.executablePath = executablePath
-    }
+    // const executablePath = process.env.CHROMIUM_PATH;
+    //
+    // if (executablePath) {
+    //
+    //     launchOptions.executablePath = executablePath
+    // }
 
     for (let dimension of dimensions) {
 
@@ -184,20 +194,20 @@ export async function critical(url, options = {}) {
             )
         }
 
-        console.info(`[${shortUrl}]> selected browser `.blue + puppeteer.product.green);
+        console.info(`[${shortUrl}]> selected browser `.blue + chromium.name().green);
         console.info(`[${shortUrl}]> set viewport to `.blue + `${dimension.width}x${dimension.height}`.green);
 
-        const browser = await puppeteer.launch(launchOptions);
+        const browser = await chromium.launch(launchOptions);
 
-        const pages = await browser.pages();
-        if (pages.length === 0) pages.push(await browser.newPage());
-
-        const page = pages[0];
-
-        if (!options.secure) {
-
-            await page.setBypassCSP(true);
-        }
+        // const pages = browser.pages();
+        // if (pages.length === 0) pages.push(await browser.newPage());
+        //
+        // const page = pages[0];
+        const context = await browser.newContext({
+            bypassCSP: !options.secure,
+            viewport: dimension
+        });
+        const page = await context.newPage();
 
         if (options.console) {
 
@@ -213,7 +223,7 @@ export async function critical(url, options = {}) {
 
         console.info(`[${shortUrl}]> open `.blue + url);
 
-        await page.goto(url, {waitUntil: 'networkidle2', timeout: 0});
+        await page.goto(url, {waitUntil: 'networkidle', timeout: 0});
 
         if (options.screenshot) {
 
@@ -230,20 +240,20 @@ export async function critical(url, options = {}) {
 
         // await page.addScriptTag({url: script});
         console.info(`[${shortUrl}]> collect critical data`.blue);
-        const data = await page.evaluate((options, script) => {
+        const data = await page.evaluate(param => {
 
             const sc = document.createElement('script');
 
-            sc.textContent = script;
+            sc.textContent = param.script;
             document.body.append(sc);
             sc.remove();
 
-            return critical.extract(options).then(result => {
+            return critical.extract(param.options).then(result => {
 
                 result.fonts = result.fonts.map(font => JSON.stringify(font));
                 return result;
             })
-        }, options,script);
+        }, {options, script});
 
         data.styles.forEach(line => styles.add(line));
         data.fonts.forEach(line => fonts.add(line));

@@ -27,8 +27,17 @@ export default [
         input: 'src/critical-cli.js',
         output: [{
             file: './bin/critical-cli.js',
-            format: 'iife',
             name: 'critical'
-        }]
+        }],
+        plugins: [
+            terser({
+                mangle: false,
+                output: {
+
+                    beautify: true,
+                    preamble: '#!/usr/bin/env node'
+                }
+            })
+        ]
     }
 ]
