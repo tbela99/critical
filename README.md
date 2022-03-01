@@ -37,7 +37,7 @@ This can prevent the script from reading external stylesheets.
 
 ## Node script
 
-Generate critical CSS path from your nodejs script using puppeteer
+Generate critical CSS path from your nodejs script using playwright
 
 ```javascript
 
