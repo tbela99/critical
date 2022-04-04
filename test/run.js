@@ -11,13 +11,14 @@ Promise.all(urls.map(url => config.critical(url, {
         // product: 'firefox',
         html: true,
         console: true,
+        verbose: true,
         secure: false,
         headless: true,
         screenshot: true,
         filename: 'output/' + basename(url).
         replace(/[?#].*$/, '').replace(/[^a-zA-Z0-9@_/-]+/g, '_') + '_critical.css',
-        dimensions: '1920x1080 1440x900 1366x768 1024x768 768x1024 320x480'.split(/[,\s]/g)
-        /*[
+        dimensions: '1920x1080 1440x900 1366x768 1024x768 768x1024 320x480'
+        /*dimensions: [
         {
             width: 1400,
             height: 900
@@ -47,7 +48,7 @@ Promise.all(urls.map(url => config.critical(url, {
     }).then((results) => {
 
         // console.log(JSON.stringify([results.stats], null, 1));
-        console.log(JSON.stringify({results}, null, 1))
+        // console.log(JSON.stringify({results}, null, 1))
         console.info('success!')
         return results
     })

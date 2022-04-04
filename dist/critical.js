@@ -69,6 +69,7 @@
      */
     async function critical(url, options = {}) {
 
+        const logger = new console.Console({ stdout: process.stderr, stderr: process.stderr });
         const styles = new Set;
         const stats = [];
         let html = '';
@@ -95,6 +96,7 @@
             filename: '',
             container: false,
             html: false,
+            verbose: false,
             output: 'output/'
         }, options);
 
@@ -131,7 +133,7 @@
 
             if (error) {
 
-                console.error({error});
+                logger.error({error});
             }
         });
 
@@ -150,7 +152,7 @@
 
         if (typeof dimensions == 'string') {
 
-            dimensions = dimensions.split(/\s/);
+            dimensions = dimensions.split(/\s/g);
         }
         else if (!Array.isArray(dimensions)) {
 
@@ -229,8 +231,11 @@
                 );
             }
 
-            console.info(`[${shortUrl}]> selected browser `.blue + chromium.name().green);
-            console.info(`[${shortUrl}]> set viewport to `.blue + `${dimension.width}x${dimension.height}`.green);
+            if (options.verbose) {
+
+                logger.info(`[${shortUrl}]> selected browser `.blue + chromium.name().green);
+                logger.info(`[${shortUrl}]> set viewport to `.blue + `${dimension.width}x${dimension.height}`.green);
+            }
 
             const browser = await chromium.launch(launchOptions);
 
@@ -247,16 +252,19 @@
             if (options.console) {
 
                 page.on('console', message =>
-                    console.log(`[${shortUrl}]> ${message.type().replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
-                    .on('pageerror', ({message}) => console.log(`[${shortUrl}]> ${message}.red`))
+                    logger.log(`[${shortUrl}]> ${message.type().replace(/^([a-z])/, (all, one) => one.toUpperCase())} ${message.text()}`.yellow))
+                    .on('pageerror', ({message}) => logger.log(`[${shortUrl}]> ${message}.red`))
                     .on('requestfailed', request => {
 
                         const failure = request.failure();
-                        console.log(`[${shortUrl}]> ${failure && failure.errorText} ${request.url()}`.red);
+                        logger.log(`[${shortUrl}]> ${failure && failure.errorText} ${request.url()}`.red);
                     });
             }
 
-            console.info(`[${shortUrl}]> open `.blue + url);
+            if (options.verbose) {
+
+                logger.info(`[${shortUrl}]> open `.blue + url);
+            }
 
             await page.goto(url, {waitUntil: 'networkidle', timeout: 0});
 
@@ -269,12 +277,21 @@
                     screenshot.path = screenshot.path.replace(/\.([^.]+)$/, `_${dimension.width}x${dimension.height}.\$1`);
                 }
 
-                console.info(`[${shortUrl}]>  generating screenshot at `.blue + screenshot.path.green);
+                if (options.verbose) {
+
+                    logger.info(`[${shortUrl}]>  generating screenshot at `.blue + screenshot.path.green);
+                }
+
                 await page.screenshot(screenshot);
             }
 
             // await page.addScriptTag({url: script});
-            console.info(`[${shortUrl}]> collect critical data`.blue);
+
+            if (options.verbose) {
+
+                logger.info(`[${shortUrl}]> collect critical data`.blue);
+            }
+
             const data = await page.evaluate(param => {
 
                 const sc = document.createElement('script');
@@ -313,12 +330,17 @@
                 cssFile += '.css';
             }
 
-            console.info(`[${shortUrl}]> writing css at `.blue + cssFile.green + ' ['.green + size(output.length).green + ']'.green);
+
+            if (options.verbose) {
+
+                logger.info(`[${shortUrl}]> writing css at `.blue + cssFile.green + ' ['.green + size(output.length).green + ']'.green);
+            }
+
             fs.writeFile(cssFile, output, function (error, data) {
 
                 if (error) {
 
-                    console.error({error});
+                    logger.error({error});
                 }
             });
         }
@@ -336,14 +358,14 @@
 
                 if (error) {
 
-                    console.error({error});
+                    logger.error({error});
                 }
             });
         }
 
-        fonts = new Set([...fonts].map(font => JSON.parse(font)));
-
         if (options.fonts) {
+
+            fonts = new Set([...fonts].map(font => JSON.parse(font)));
 
             let fontJS = options.filename;
             let data = '/* no font found! */';
@@ -355,18 +377,25 @@
 
             if (fonts.size == 0) {
 
-                console.info(`[${shortUrl}]> no preload font found`.yellow);
+                if (options.verbose) {
+
+                    logger.info(`[${shortUrl}]> no preload font found`.yellow);
+                }
             } else {
 
                 data = fontscript([...fonts]);
-                console.info(`[${shortUrl}]> writing `.blue + fonts.size.toString().green + ` preload font script at `.blue + `${fontJS} [`.green + size(data.length).green + ']'.green);
+
+                if (options.verbose) {
+
+                    logger.info(`[${shortUrl}]> writing `.blue + fonts.size.toString().green + ` preload font script at `.blue + `${fontJS} [`.green + size(data.length).green + ']'.green);
+                }
             }
 
             fs.writeFile(fontJS, data, function (error, data) {
 
                 if (error) {
 
-                    console.error({error});
+                    logger.error({error});
                 }
             });
         }

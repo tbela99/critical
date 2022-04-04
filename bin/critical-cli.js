@@ -62,6 +62,10 @@ const _yargs = yargs(hideBin(process.argv)).command("url [url+] [options+]\nrun 
     alias: "p",
     description: "generate an HTML page containing inlined critical css",
     type: "boolean"
+}).option("verbose", {
+    alias: "v",
+    description: "verbose mode",
+    type: "boolean"
 }).help().alias("help", "h"), options = _yargs.argv, urls = options._;
 
 for (let key of Object.keys(options)) 1 == key.length && "_" != key && delete options[key];
@@ -70,5 +74,5 @@ delete options._, delete options.$0, 0 == urls.length && (_yargs.showHelp(), pro
 options.container = !0;
 
 for (let url of urls) critical.critical(url, options).catch((error => {
-    console.error(error);
+    process.stderr.write(error);
 }));
