@@ -81,6 +81,7 @@ urls.forEach(url => {
   - dimensions: _array_ or _string_. array of viewports. this takes precedence over height and width. viewports can be specified as objects with width and height property or a string.
   - container: _bool_. turn off additional features, required to run inside a container
   - html: _bool_. generate an HTML page containing inlined critical css
+  - verbose: _bool_. enable verbose mode
   - output: _string_. change output directory. default _'./output/'_
 
 ## Command line script
@@ -88,7 +89,7 @@ urls.forEach(url => {
 when installed globally, it is available as _critical-cli_
 
 ```bash
-$ sudo node install -g @tbela99/critical
+$ sudo npm  install -g @tbela99/critical
 $ critical-cli -i http://google.com
 ```
 
@@ -118,9 +119,11 @@ Options:
                                                        [boolean] [default: true]
   -c, --container   Disable additional security settings, required to run inside a container
                                                                        [boolean]
-  -p, --html        generate an HTML page containing inlined critical css
-                                                                       [boolean]
+  -p, --html        Generate an HTML page containing inlined critical css
+                                                                       [boolean]  
+  -v, --verbose     Enable verbose mode                                       [boolean]
   -h, --help        Show help                                          [boolean]
+
 ```
 
 ### Example

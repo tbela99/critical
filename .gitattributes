@@ -1,0 +1,4 @@
+/test/ export-ignore
+/src/  export-ignore
+/rollup.config.js  export-ignore
+/screenshot.png  export-ignore

@@ -20,9 +20,7 @@ export async function extract(options = {}) {
 
     // Get a list of all the elements in the view.
     const height = window.innerHeight;
-    const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: function (node) {
-        return NodeFilter.SHOW_ELEMENT;
-    }});
+    const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: () => NodeFilter.SHOW_ELEMENT});
 
     const fonts = new Set;
     const fontFamilies = new Set;
@@ -40,7 +38,7 @@ export async function extract(options = {}) {
 
         rule = document.styleSheets[k];
 
-        if (rule.media.mediaText == 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
+        if (rule.media.mediaText === 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
 
             continue;
         }
@@ -64,7 +62,7 @@ export async function extract(options = {}) {
 
     if (allStylesheets.length === 0) {
 
-        return {};
+        return {styles: [], fonts: [], stats: {}};
     }
 
     let node;
@@ -75,7 +73,7 @@ export async function extract(options = {}) {
 
     while ((node = walker.nextNode())) {
 
-        if (options?.signal?.aborted) {
+        if (options && options.signal && options.signal.aborted) {
 
             return Promise.reject('Aborted');
         }
@@ -137,7 +135,7 @@ export async function extract(options = {}) {
 
                 if (allStylesheets[k].rule.style.getPropertyValue('font-family')) {
 
-                    allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily != 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
+                    allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily !== 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
                 }
             }
 
@@ -211,7 +209,7 @@ export async function extract(options = {}) {
                 });
 
                 fileUpdate = true;
-            } else if (file && file != files.get(rule.parentStyleSheet).file) {
+            } else if (file && file !== files.get(rule.parentStyleSheet).file) {
 
                 fileUpdate = true;
             }
@@ -232,7 +230,7 @@ export async function extract(options = {}) {
             file = files.get(rule.parentStyleSheet).file;
             css = rule.cssText;
 
-            if (file != 'inline') {
+            if (file !== 'inline') {
 
                 // resolve url()
                 css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {
@@ -250,37 +248,35 @@ export async function extract(options = {}) {
                 })
             }
 
-            loop2:
+            while (rule.parentRule) {
 
-                while (rule.parentRule) {
+                /**
+                 *
+                 * @type {CSSMediaRule}
+                 */
+                rule = rule.parentRule;
 
-                    /**
-                     *
-                     * @type {CSSMediaRule}
-                     */
-                    rule = rule.parentRule;
+                if (rule.conditionText == 'print') {
 
-                    if (rule.conditionText == 'print') {
-
-                        continue loop1;
-                    }
-
-                    if (!excluded.includes(rule.conditionText)) {
-
-                        css = '@' + rule.constructor.name.replace(/^CSS(.*?)Rule/, '$1').toLowerCase() + ' ' + rule.conditionText + ' {' + css + '}';
-                    }
-
-                    if (!rule.parentRule) {
-
-                        break;
-                    }
+                    continue loop1;
                 }
+
+                if (!excluded.includes(rule.conditionText)) {
+
+                    css = '@' + rule.constructor.name.replace(/^CSS(.*?)Rule/, '$1').toLowerCase() + ' ' + rule.conditionText + ' {' + css + '}';
+                }
+
+                if (!rule.parentRule) {
+
+                    break;
+                }
+            }
 
             if (rule.parentStyleSheet) {
 
                 let media = rule.parentStyleSheet.media.mediaText;
 
-                if (media == 'print') {
+                if (media === 'print') {
 
                     continue loop1;
                 }
@@ -361,8 +357,8 @@ export async function extract(options = {}) {
                     name = font.style.item(j);
                     value = font.style.getPropertyValue(name);
 
-                    name != 'font-family' &&
-                    name != 'src' &&
+                    name !== 'font-family' &&
+                    name !== 'src' &&
                     value !== '' &&
                     value !== undefined &&
                     (fontObject.properties[name.replace(/([A-Z])/g, (all, name) => '-' + name.toLowerCase())] = value)
@@ -409,9 +405,9 @@ export async function extract(options = {}) {
 
             document.body.append(node);
 
-            if (node.tagName == 'LINK') {
+            if (node.tagName === 'LINK') {
 
-                if (node.media == 'print') {
+                if (node.media === 'print') {
 
                     return
                 }

@@ -61,7 +61,11 @@ const _yargs = yargs(hideBin(process.argv)).command('url [url+] [options+]\nrun 
     type: 'boolean',
 }).option('html', {
     alias: 'p',
-    description: 'generate an HTML page containing inlined critical css',
+    description: 'Generate an HTML page containing inlined critical css',
+    type: 'boolean',
+}).option('verbose', {
+    alias: 'v',
+    description: 'Enable verbose mode',
     type: 'boolean',
 }).help().alias('help', 'h');
 
@@ -94,7 +98,7 @@ for (let url of urls) {
 
         return (error) => {
 
-            console.error(error);
+            process.stderr.write(error);
         }
     })(url));
 }
