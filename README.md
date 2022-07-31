@@ -89,7 +89,7 @@ urls.forEach(url => {
 when installed globally, it is available as _critical-cli_
 
 ```bash
-$ sudo node install -g @tbela99/critical
+$ sudo npm  install -g @tbela99/critical
 $ critical-cli -i http://google.com
 ```
 
