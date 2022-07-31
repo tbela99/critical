@@ -281,10 +281,10 @@ export async function extract(options = {}) {
                     continue loop1;
                 }
 
-                // if (!excluded.includes(media)) {
+                if (media !== '') {
 
                     css = '@media ' + media + ' {' + css + '}';
-                // }
+                }
             }
 
             if (styles.has(css)) {

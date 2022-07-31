@@ -10,7 +10,7 @@
   },
   "name": "@tbela99/critical",
   "description": "Extract critical CSS from HTML pages to enable instantaneous rendering",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "main": "dist/critical.js",
   "browser": "dist/browser.js",
   "directories": {
@@ -35,7 +35,7 @@
     "critical-cli": "bin/critical-cli.js"
   },
   "devDependencies": {
-    "rollup": "^2.66.1",
+    "rollup": "^2.77.2",
     "rollup-plugin-terser": "^7.0.2"
   }
 }
