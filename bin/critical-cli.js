@@ -1,80 +1,31 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --enable-source-maps
+import {critical} from '../dist/index.js';
 import yargs from 'yargs';
 import {hideBin} from 'yargs/helpers';
-import {critical} from '../dist/index.js';
+import {default as cliArgs} from '../bin/args.json' assert {type: 'json'};
 
-const _yargs = yargs(hideBin(process.argv)).command('url [url+] [options+]\nrun the command line tools', 'Example: critical-cli -d 800x600 -d 1024x768 -i https://facebook.com').
-option('headless', {
-    alias: 't',
-    description: 'enable or disable headless mode',
-    type: 'boolean',
-    defaultDescription: "true"
-}).option('browser', {
-    alias: 'b',
-    default: 'chromium',
-    description: 'browser to use',
-    choices: ['chromium', 'firefox', 'webkit', 'edge', 'chrome'],
-    defaultDescription: "chromium",
-    type: 'string'
-}).option('random-user-agent', {
-    alias: 'r',
-    description: 'generate random user and prevent browser automation detection',
-    type: 'boolean'
-}).option('fonts', {
-    alias: 'f',
-    description: 'Generate javascript to load fonts dynamically',
-    type: 'boolean',
-    defaultDescription: "true"
-}).option('screenshot', {
-    alias: 'i',
-    description: 'Generate screenshots',
-    type: 'boolean'
-}).option('console', {
-    alias: 'l',
-    description: 'Show console messages from the browser',
-    type: 'boolean',
-    defaultDescription: "true"
-}).option('secure', {
-    alias: 's',
-    description: 'enable or disable security settings such as CSP and same origin policy',
-    type: 'boolean'
-}).option('filename', {
-    alias: 'n',
-    description: 'prefix of the generated files',
-    type: 'string'
-}).option('width', {
-    alias: 'w',
-    description: 'Viewport width',
-    type: 'number'
-}).option('height', {
-    alias: 'a',
-    description: 'Viewport height',
-    type: 'number'
-}).option('dimensions', {
-    alias: 'd',
-    type: 'array',
-    description: 'Array of viewports, override height/width settings',
-    defaultDescription: "'1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'"
-}).option('container', {
-    alias: 'c',
-    description: 'Disable additional security settings to run inside a container',
-    type: 'boolean',
-}).option('html', {
-    alias: 'p',
-    description: 'generate an HTML page containing inlined critical css',
-    type: 'boolean',
-}).option('output', {
-    alias: 'o',
-    description: 'Output directory',
-    type: 'string'
-}).
-positional('url', {
-    describe: 'list of urls',
-    type: 'string'
-}).help().
-alias('help', 'h');
+// @ts-ignore
+const _yargs = yargs(hideBin(process.argv)).usage(cliArgs.description);
+const aliases = new Map;
+
+aliases.set('h', 'help');
+
+for (const [name, command] of Object.entries(cliArgs.args)) {
+
+    if (aliases.has(command.alias)) {
+
+        throw new Error(`'${name}': Alias ${command.alias} already in use by ${aliases.get(command.alias)}'`);
+    }
+
+    aliases.set(command.alias, name);
+    _yargs.option(name, command);
+}
+
+_yargs.help().alias('help', 'h');
 
 const options = _yargs.argv;
+
+// @ts-ignore
 const urls = options._;
 
 for (let key of Object.keys(options)) {
@@ -86,7 +37,10 @@ for (let key of Object.keys(options)) {
     }
 }
 
+
+// @ts-ignore
 delete options._;
+// @ts-ignore
 delete options.$0;
 
 if (urls.length === 0) {
@@ -95,9 +49,16 @@ if (urls.length === 0) {
     process.exit();
 }
 
-options.container = true;
+// @ts-ignore
+// options.container = true;
 
 for (let url of urls) {
 
-    critical(url, options).catch(error => console.error(error));
+    critical(url, options).catch(((url) => {
+
+        return (error) => {
+
+            process.stderr.write(url + '\n' + error);
+        }
+    })(url));
 }

@@ -31,13 +31,8 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
     const excluded: string[] = ['all', 'print', ''];
     const allStylesheets: MatchCSSStyleSheet[] = new Array<MatchCSSStyleSheet>();
 
-    // Get a list of all the elements in the view.
-    const height: number = window.innerHeight;
-    const walker: NodeIterator = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {
-        acceptNode: function (): number {
-            return NodeFilter.SHOW_ELEMENT;
-        }
-    });
+    const height = window.innerHeight;
+    const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: () => NodeFilter.SHOW_ELEMENT});
 
     const fonts: Set<RuleList> = new Set<RuleList>();
     const fontFamilies: Set<string> = new Set;
@@ -57,7 +52,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
         rule = document.styleSheets[k];
 
-        if (rule.media.mediaText == 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
+        if (rule.media.mediaText === 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
 
             continue;
         }
@@ -81,16 +76,8 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
     if (allStylesheets.length === 0) {
 
-        const doctype = document.doctype;
-
-        return options.html ? {
-            html: (doctype ? `<!Doctype ${doctype.name}`
-                + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
-                + (doctype.systemId
-                    ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
-                    : ``)
-                + `>` + '\n' : '') + document.documentElement.outerHTML
-        } : {};
+        // @ts-ignore
+        return {styles: [], fonts: [], stats: {}};
     }
 
     let node: Element;
@@ -101,6 +88,11 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
     // @ts-ignore
     while ((node = walker.nextNode())) {
+
+        if (options && options.signal && options.signal.aborted) {
+
+            return Promise.reject('Aborted');
+        }
 
         if (['SCRIPT', 'LINK', 'HEAD', 'META', 'TITLE', 'NOSCRIPT'].includes(node.tagName)) {
 
@@ -161,7 +153,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                 if (allStylesheets[k].rule.style.getPropertyValue('font-family')) {
 
                     // @ts-ignore
-                    allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily != 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
+                    allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily !== 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
                 }
             }
 
@@ -242,9 +234,11 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                 });
 
                 fileUpdate = true;
-            } else if (file && file != (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).file) {
+            } else { // @ts-ignore
+                if (file && file !== files.get(rule.parentStyleSheet).file) {
 
-                fileUpdate = true;
+                                fileUpdate = true;
+                            }
             }
 
             if (fileUpdate) {
@@ -265,7 +259,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
             // @ts-ignore
             css = rule.cssText;
 
-            if (file != 'inline') {
+            if (file !== 'inline') {
 
                 // resolve url()
                 css = css.replace(/url\(([^)%\s]*?)\)/g, function (all: string, one: string) {
@@ -282,8 +276,6 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                     return 'url(' + resolve(one, (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).base) + ')';
                 })
             }
-
-            // loop2:
 
             // @ts-ignore
             while (rule.parentRule) {
@@ -319,7 +311,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
                 let media: string = rule.parentStyleSheet.media.mediaText;
 
-                if (media == 'print') {
+                if (media === 'print') {
 
                     continue;
                 }
@@ -408,8 +400,8 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                     // @ts-ignore
                     value = font.style.getPropertyValue(name);
 
-                    name != 'font-family' &&
-                    name != 'src' &&
+                    name !== 'font-family' &&
+                    name !== 'src' &&
                     value !== '' &&
                     value !== undefined &&
                     (fontObject.properties[name.replace(/([A-Z])/g, (all: string, name: string) => '-' + name.toLowerCase())] = value)
@@ -461,9 +453,9 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
             document.body.append(node);
 
-            if (node.tagName == 'LINK') {
+            if (node.tagName === 'LINK') {
 
-                if (node.media == 'print') {
+                if (node.media === 'print') {
 
                     return
                 }
@@ -480,25 +472,6 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                 node.dataset.async = '';
             }
         });
-
-        // inject page link[rel=stylesheet]
-        // const script = document.createElement('script');
-        //
-        // script.textContent = `
-        // window.addEventListener('DOMContentLoaded', () => Array.from(document.querySelectorAll('link[data-async]')).forEach(node => {
-        //
-        //         if(!node.hasAttribute('data-media')) {
-        //             node.removeAttribute('media');
-        //         }
-        //         else {
-        //             node.media=node.dataset.media;
-        //             node.removeAttribute('data-media')
-        //         }
-        //
-        //         node.removeAttribute('data-async');
-        // }))`;
-        //
-        // document.head.append(script);
 
         // add data-attribute
         const style: HTMLStyleElement = document.createElement('style');
@@ -520,6 +493,11 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
             await options.transform(css).then((parseResult: TransformResult) => style.textContent = parseResult.code);
         }
 
+        else {
+
+            style.textContent = css;
+        }
+
         if (style.innerText.trim() !== '') {
 
             document.head.insertBefore(style, (<HTMLBaseElement>document.querySelector('base'))?.nextElementSibling);
@@ -532,7 +510,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
             document.head.append(script);
         }
 
-        options.signal?.removeEventListener('abort', abortSignal);
+        options?.signal?.removeEventListener('abort', abortSignal);
 
         const doctype: DocumentType | null = document.doctype;
 

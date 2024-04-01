@@ -1,0 +1,9 @@
+/package-lock.json
+/rollup.config.js
+/screenshot.png
+# Dependency directories
+/node_modules/
+/.idea
+/output/
+/test/
+/src/

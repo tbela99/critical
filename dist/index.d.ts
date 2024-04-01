@@ -10,7 +10,9 @@ interface CriticalOptions {
 
     width?: number;
     height?: number;
+    browserType?: 'mobile' | 'desktop' | 'default';
     browser?: BrowserOptions;
+    randomBrowser?: boolean;
     dimensions?: string | Array<string> | Array<CriticalDimension>;
     screenshot?: boolean | string | { path: string };
     randomUserAgent?: boolean;
@@ -23,6 +25,8 @@ interface CriticalOptions {
     html?: boolean;
     output?: string;
     pause?: number;
+    verbose?: boolean;
+    colorScheme?: 'light' | 'dark';
 }
 
 interface CriticalCliStats {

@@ -1,7 +1,6 @@
 /package-#lock.json
 # Dependency directories
 /node_modules/
-/output
+/output/
 /.idea
 /output/
-/test/

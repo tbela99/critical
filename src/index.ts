@@ -1,9 +1,11 @@
 import * as playwright from "playwright";
+import {devices} from "playwright";
 import {resolve, dirname, basename} from "path";
 import {mkdir, readFileSync, writeFile} from "fs";
 import {fontscript} from "./critical/fontscript";
 import {size} from "./file/size";
 import {
+    BrowserOptions,
     CriticalCliResult, CriticalCliStats,
     CriticalDimension,
     CriticalExtractOptions,
@@ -17,11 +19,21 @@ import {render, transform, TransformOptions, TransformResult} from "@tbela99/css
 import {createRequire} from 'node:module';
 
 const __dirname: string = dirname(new URL(import.meta.url).pathname);
-basename(new URL(import.meta.url).pathname);
+// basename(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
 
 const script: string = readFileSync(require.resolve('@tbela99/critical/browser'), {encoding: "utf-8"});
 const minify: string = readFileSync(require.resolve('@tbela99/css-parser/umd'), {encoding: "utf-8"});
+// @ts-ignore
+const deviceNames: Array<{
+    userAgent: string;
+    viewport: any[];
+    screen: any[];
+    deviceScaleFactor: number;
+    isMobile: boolean;
+    hasTouch: boolean;
+    defaultBrowserType: string;
+}> = Object.values(devices);
 
 async function sleep(duration: number) {
 
@@ -30,16 +42,16 @@ async function sleep(duration: number) {
 
 export async function critical(url: string, options: CriticalOptions = {}): Promise<CriticalCliResult> {
 
+
     let html: string = '';
     let fonts: Set<string> = new Set<string>;
 
     const styles: Set<string> = new Set<string>;
     const stats: CriticalCliStats[] = [];
-    const chromium: BrowserType = <BrowserType>(['chromium', 'firefox', 'webkit', 'edge', 'chrome'].includes(<string>options.browser) &&
-            // @ts-ignore
-            playwright[<string>options.browser]) ||
+    const browserName: BrowserOptions = <BrowserOptions>(options.randomBrowser ? ['chromium', 'firefox', 'webkit', 'edge', 'chrome'][Math.floor(Math.random() * 5)] : options.browser ?? 'chromium');
+    const chromium: BrowserType = <BrowserType>(['chromium', 'firefox', 'webkit', 'edge', 'chrome'].includes(browserName) &&
         // @ts-ignore
-        <string>playwright.chromium;
+        playwright[browserName]) ?? <string>playwright.chromium ?? 'chromium';
 
     if (['"', "'"].includes(url.charAt(0))) {
 
@@ -53,20 +65,23 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
     options = {
 
-        fonts: true,
         headless: true,
+        randomBrowser: false,
+        fonts: true,
         screenshot: false,
-        console: true,
+        console: false,
         secure: false,
         filename: '',
         container: false,
         html: false,
         pause: 30,
-        output: 'output/', ...options
+        verbose: false,
+        colorScheme: 'dark',
+        output: 'output/', ...options, browser: browserName
     };
 
     let theUrl: URL = new URL(url);
-    let filePath: string = <string>options.output;
+    let filePath: string = <string>options.output + ((<string>options.output).endsWith('/') ? '' : '/') + browserName + (options.browserType != null ? '-' + options.browserType : '') + ('/' + options.colorScheme);
     let shortUrl: string = (theUrl.protocol == 'file:' ? basename(theUrl.pathname) : theUrl.protocol + '//' + theUrl.host + theUrl.pathname);
     let dimensions: string | string[] | Array<CriticalDimension>;
 
@@ -117,7 +132,7 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
     if (typeof dimensions == 'string') {
 
-        dimensions = dimensions.split(/\s/)
+        dimensions = (<string>dimensions).split(/\s/)
     } else if (!Array.isArray(dimensions)) {
 
         dimensions = [dimensions];
@@ -141,7 +156,6 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
     dimensions.sort(() => [-1, 0, 1][Math.floor(3 * Math.random())]);
 
-
     // @ts-ignore
     for (const dimension of <CriticalDimension[]>dimensions) {
 
@@ -153,7 +167,7 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
                 isLandscape: false,
             },
             waitForInitialPage: false,
-            args: new Array<string>(),
+            args: <string[]>[],
             ignoreDefaultArgs: ['--enable-automation']
         };
 
@@ -186,11 +200,43 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
             )
         }
 
-        console.info(chalk.blue(`[${shortUrl}]> selected browser `) + chalk.green(chromium.name()));
-        console.info(chalk.blue(`[${shortUrl}${size}]> set viewport to `) + chalk.green(`${dimension.width}x${dimension.height}`));
+        if (options.verbose || options.console) {
+
+            console.info(chalk.blue(`[${shortUrl}]> selected browser `) + chalk.green(chromium.name()));
+            console.info(chalk.blue(`[${shortUrl}${size}]> set viewport to `) + chalk.green(`${dimension.width}x${dimension.height}`));
+        }
+
+        let contextData = {};
+
+        if (options.browserType != null || options.randomUserAgent || options.randomBrowser) {
+
+            contextData = deviceNames.slice().sort(() => [-1, 0, 1][Math.floor(3 * Math.random())]).filter(d => {
+
+                if (browserName != d.defaultBrowserType) {
+
+                    return false;
+                }
+
+                if (options.browserType != null) {
+
+                    if (options.browserType == 'mobile') {
+
+                        return d.isMobile;
+                    } else {
+
+                        return !d.isMobile;
+                    }
+                }
+
+                return true;
+            })[0];
+        }
 
         const browser: Browser = <Browser>await chromium.launch(launchOptions);
+        // @ts-ignore
         const context: BrowserContext = <BrowserContext>await browser.newContext({
+            // @ts-ignore
+            ...contextData,
             bypassCSP: !options.secure,
             viewport: dimension
         });
@@ -200,13 +246,7 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
             // antibot evasion
             await context.addInitScript(() => {
 
-                const userAgent: string = navigator.userAgent.replace(/((Firefox)|(Chrome)|(Edge)|(Webkit)|(Safari)|(AppleWebKit))\/((\d+)(\.\d+)?)/, (all: string, one: string, two: string, three: string, four: string, five: string, six: string, seven: string, eight: string, nine: string, ten: string): string => {
-
-                    return ['Firefox', 'Chrome', 'Edge', 'Webkit', 'AppleWebKit', 'Safari'][Math.floor(6 * Math.random())] + '/' + (+nine + [0, -1, -2, -3][Math.floor(4 * Math.random())]) + ten
-                }).replace(/(\((.*?)\))/, (): string => `(${['X11; Linux x86_64', 'Macintosh; Intel Mac OS X 10.15; rv:109.0', 'Macintosh; Intel Mac OS X 10_15_7'][Math.floor(3 * Math.random())]})`);
-
                 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                Object.defineProperty(navigator, 'userAgent', {get: () => userAgent})
             });
         }
 
@@ -214,6 +254,10 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
         await context.addInitScript(minify);
 
         const page: Page = await context.newPage();
+
+        await page.emulateMedia({
+            colorScheme: options.colorScheme,
+        });
 
         if (options.console) {
 
@@ -244,11 +288,19 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
                 screenshot.path = screenshot.path.replace(/\.([^.]+)$/, `_${dimension.width}x${dimension.height}.\$1`)
             }
 
-            console.info(chalk.blue(`[${shortUrl}${size}]>  generating screenshot at `) + chalk.green(screenshot.path));
-            await page.screenshot(screenshot); // .catch(error => console.error(error));
+            if (options.verbose) {
+
+                console.info(chalk.blue(`[${shortUrl}${size}]> generating screenshot at `) + chalk.green(screenshot.path));
+            }
+
+            await page.screenshot(screenshot);
         }
 
-        console.info(chalk.blue(`[${shortUrl}${size}]> collect critical data`));
+        if (options.verbose) {
+
+            console.info(chalk.blue(`[${shortUrl}${size}]> collect critical data`));
+        }
+
         const data = await page.evaluate(async (param: { options: CriticalExtractOptions }) => {
 
             // @ts-ignore
@@ -267,7 +319,11 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
                     result.fonts = <string[]>(result.fonts).map((font: FontObject) => JSON.stringify(font));
                 }
 
-                console.error(JSON.stringify({result}, null, 1));
+                // @ts-ignore
+                if (param.options.verbose) {
+
+                    console.log(JSON.stringify({result}, null, 1));
+                }
 
                 return result;
             });
@@ -301,6 +357,10 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
             return {code: result.code, unminified: render(result.ast, {minify: false}).code}
         }));
+        const {code: nestedCSS, unminified: nestedUnminified}: { code: string; unminified: string } = (await transform(rawCSS, {nestingRules: true}).then(result => {
+
+            return {code: result.code, unminified: render(result.ast, {minify: false}).code}
+        }));
 
         let cssFile: string = options.filename;
 
@@ -311,6 +371,9 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
         const minCssFile: string = cssFile.slice(0, -4) + '.min.css';
         const rawCssFile: string = cssFile.slice(0, -4) + '.raw.css';
+
+        const minNestedCssFile: string = cssFile.slice(0, -4) + '.nested.min.css';
+        const nestedCssFile: string = cssFile.slice(0, -4) + '.nested.css';
 
         console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minCssFile + ' [' + size(code.length) + ']'));
         // @ts-ignore
@@ -325,6 +388,35 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
         console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(cssFile + ' [' + size(unminified.length) + ']'));
 
         writeFile(cssFile, unminified, function (error: Error | null) {
+
+            if (error) {
+
+                console.error({error});
+            }
+        });
+
+        // @ts-ignore
+        writeFile(rawCssFile, rawCSS, function (error: Error | null) {
+
+            if (error) {
+
+                console.error({error});
+            }
+        });
+
+        console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minNestedCssFile + ' [' + size(nestedCSS.length) + ']'));
+        // @ts-ignore
+        writeFile(minNestedCssFile, nestedCSS, function (error: Error | null) {
+
+            if (error) {
+
+                console.error({error});
+            }
+        });
+
+        console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(nestedCssFile + ' [' + size(nestedUnminified.length) + ']'));
+
+        writeFile(nestedCssFile, nestedUnminified, function (error: Error | null) {
 
             if (error) {
 

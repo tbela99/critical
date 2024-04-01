@@ -28,7 +28,7 @@
     }
 
     function abortSignal() {
-        throw new Error();
+        throw new Error(`CSS extraction aborted`);
     }
     /**
      * {Object} options
@@ -44,13 +44,8 @@
         const styles = new Set;
         const excluded = ['all', 'print', ''];
         const allStylesheets = new Array();
-        // Get a list of all the elements in the view.
         const height = window.innerHeight;
-        const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {
-            acceptNode: function () {
-                return NodeFilter.SHOW_ELEMENT;
-            }
-        });
+        const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, { acceptNode: () => NodeFilter.SHOW_ELEMENT });
         const fonts = new Set();
         const fontFamilies = new Set;
         const files = new Map;
@@ -64,7 +59,7 @@
         performance.mark('filterStylesheets');
         for (k = 0; k < document.styleSheets.length; k++) {
             rule = document.styleSheets[k];
-            if (rule.media.mediaText == 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
+            if (rule.media.mediaText === 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
                 continue;
             }
             try {
@@ -79,15 +74,8 @@
         }
         performance.measure('filter stylesheets', 'filterStylesheets');
         if (allStylesheets.length === 0) {
-            const doctype = document.doctype;
-            return options.html ? {
-                html: (doctype ? `<!Doctype ${doctype.name}`
-                    + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
-                    + (doctype.systemId
-                        ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
-                        : ``)
-                    + `>` + '\n' : '') + document.documentElement.outerHTML
-            } : {};
+            // @ts-ignore
+            return { styles: [], fonts: [], stats: {} };
         }
         let node;
         let rect;
@@ -95,6 +83,9 @@
         performance.mark('nodeWalking');
         // @ts-ignore
         while ((node = walker.nextNode())) {
+            if (options && options.signal && options.signal.aborted) {
+                return Promise.reject('Aborted');
+            }
             if (['SCRIPT', 'LINK', 'HEAD', 'META', 'TITLE', 'NOSCRIPT'].includes(node.tagName)) {
                 continue;
             }
@@ -135,7 +126,7 @@
                     // @ts-ignore
                     if (allStylesheets[k].rule.style.getPropertyValue('font-family')) {
                         // @ts-ignore
-                        allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily != 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
+                        allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily !== 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
                     }
                 }
             }
@@ -195,8 +186,10 @@
                 });
                 fileUpdate = true;
             }
-            else if (file && file != files.get(rule.parentStyleSheet).file) {
-                fileUpdate = true;
+            else { // @ts-ignore
+                if (file && file !== files.get(rule.parentStyleSheet).file) {
+                    fileUpdate = true;
+                }
             }
             if (fileUpdate) {
                 // @ts-ignore
@@ -212,7 +205,7 @@
             file = files.get(rule.parentStyleSheet).file;
             // @ts-ignore
             css = rule.cssText;
-            if (file != 'inline') {
+            if (file !== 'inline') {
                 // resolve url()
                 css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {
                     one = one.trim();
@@ -223,7 +216,6 @@
                     return 'url(' + resolve(one, files.get(rule.parentStyleSheet).base) + ')';
                 });
             }
-            // loop2:
             // @ts-ignore
             while (rule.parentRule) {
                 /**
@@ -248,7 +240,7 @@
             }
             if (rule.parentStyleSheet) {
                 let media = rule.parentStyleSheet.media.mediaText;
-                if (media == 'print') {
+                if (media === 'print') {
                     continue;
                 }
                 if (media !== '') {
@@ -308,8 +300,8 @@
                         name = font.style.item(j);
                         // @ts-ignore
                         value = font.style.getPropertyValue(name);
-                        name != 'font-family' &&
-                            name != 'src' &&
+                        name !== 'font-family' &&
+                            name !== 'src' &&
                             value !== '' &&
                             value !== undefined &&
                             (fontObject.properties[name.replace(/([A-Z])/g, (all, name) => '-' + name.toLowerCase())] = value);
@@ -344,8 +336,8 @@
             }
             Array.from(document.querySelectorAll('style,link[rel=stylesheet]')).forEach((node) => {
                 document.body.append(node);
-                if (node.tagName == 'LINK') {
-                    if (node.media == 'print') {
+                if (node.tagName === 'LINK') {
+                    if (node.media === 'print') {
                         return;
                     }
                     if (node.hasAttribute('media')) {
@@ -358,24 +350,6 @@
                     node.dataset.async = '';
                 }
             });
-            // inject page link[rel=stylesheet]
-            // const script = document.createElement('script');
-            //
-            // script.textContent = `
-            // window.addEventListener('DOMContentLoaded', () => Array.from(document.querySelectorAll('link[data-async]')).forEach(node => {
-            //
-            //         if(!node.hasAttribute('data-media')) {
-            //             node.removeAttribute('media');
-            //         }
-            //         else {
-            //             node.media=node.dataset.media;
-            //             node.removeAttribute('data-media')
-            //         }
-            //
-            //         node.removeAttribute('data-async');
-            // }))`;
-            //
-            // document.head.append(script);
             // add data-attribute
             const style = document.createElement('style');
             // @ts-ignore
@@ -389,6 +363,9 @@
             if (options.transform != null) {
                 await options.transform(css).then((parseResult) => style.textContent = parseResult.code);
             }
+            else {
+                style.textContent = css;
+            }
             if (style.innerText.trim() !== '') {
                 document.head.insertBefore(style, document.querySelector('base')?.nextElementSibling);
             }
@@ -397,7 +374,7 @@
                 script.textContent = fontscript(result.fonts);
                 document.head.append(script);
             }
-            options.signal?.removeEventListener('abort', abortSignal);
+            options?.signal?.removeEventListener('abort', abortSignal);
             const doctype = document.doctype;
             result.html = (doctype ? `<!Doctype ${doctype.name}`
                 + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')

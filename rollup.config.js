@@ -2,9 +2,10 @@ import typescript from '@rollup/plugin-typescript';
 import terser from "@rollup/plugin-terser";
 import commonjs from "@rollup/plugin-commonjs";
 import {dts} from "rollup-plugin-dts";
+import json from "@rollup/plugin-json";
 
 const external = ['playwright', 'playwright-core', 'yargs', 'chalk'];
-const plugins = [typescript(), commonjs()];
+const plugins = [typescript(), commonjs(), json()];
 const sourcemap = true;
 
 export default [
@@ -13,7 +14,6 @@ export default [
         plugins,
         external,
         output: [{
-            // file: './dist/critical.js',
             dir: './dist',
             preserveModules: true,
             sourcemap,
@@ -39,25 +39,6 @@ export default [
             }
         ]
     },
-    // {
-    //     input: 'src/critical-cli.ts',
-    //     external,
-    //     output: [{
-    //         file: './bin/critical-cli.js',
-    //         name: 'critical'
-    //     }],
-    //     plugins: [
-    //         typescript(),
-    //         terser({
-    //             mangle: false,
-    //             output: {
-    //
-    //                 beautify: true,
-    //                 preamble: '#!/usr/bin/env node'
-    //             }
-    //         })
-    //     ]
-    // },
     {
         input: 'src/index.ts',
         plugins: [dts()],

@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+    <title>testing supports</title>
+    <meta charset="utf-8">
+    <style>
+
+        @supports (display: grid) {
+            body {
+                margin: 0;
+            }
+            div {
+                background: red;
+                width: 100%;
+                height: 100vh;
+                padding: 10px;
+                color: yellow;
+                font-weight: 700;
+            }
+
+            @media (min-width: 700px){
+                div {
+                    background: #435400;
+                }
+            }
+
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    I am red deer
+</div>
+<script src='../../dist/browser.js'></script>
+<script>
+    critical.extract().then(content => console.log({content}))
+</script>
+</body>
+</html>
