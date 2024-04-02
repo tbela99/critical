@@ -21,8 +21,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./browser": "./dist/browser.js",
-    "./web": "./dist/web/index.js",
-    "./cjs": "./dist/index.cjs"
+    "./umd": "./dist/browser-umd.js"
   },
   "directories": {
     "test": "test"

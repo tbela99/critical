@@ -8,25 +8,25 @@ interface CriticalDimension {
 
 interface CriticalOptions {
 
+    headless?: boolean;
+    browser?: BrowserOptions;
+    browserType?: 'mobile' | 'desktop' | 'default';
     width?: number;
     height?: number;
-    browserType?: 'mobile' | 'desktop' | 'default';
-    browser?: BrowserOptions;
-    randomBrowser?: boolean;
     dimensions?: string | Array<string> | Array<CriticalDimension>;
-    screenshot?: boolean | string | { path: string };
-    randomUserAgent?: boolean;
-    fonts?: boolean;
-    headless?: boolean;
-    console?: boolean;
-    secure?: boolean;
-    filename?: string;
     container?: boolean;
-    html?: boolean;
-    output?: string;
-    pause?: number;
-    verbose?: boolean;
+    secure?: boolean;
+    screenshot?: boolean | string | { path: string };
     colorScheme?: 'light' | 'dark';
+    randomBrowser?: boolean;
+    randomUserAgent?: boolean;
+    html?: boolean;
+    fonts?: boolean;
+    output?: string;
+    filename?: string;
+    console?: boolean;
+    verbose?: boolean;
+    pause?: number;
 }
 
 interface CriticalCliStats {

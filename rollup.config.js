@@ -1,5 +1,4 @@
 import typescript from '@rollup/plugin-typescript';
-import terser from "@rollup/plugin-terser";
 import commonjs from "@rollup/plugin-commonjs";
 import {dts} from "rollup-plugin-dts";
 import json from "@rollup/plugin-json";
@@ -27,15 +26,15 @@ export default [
         external,
         output: [
             {
+                sourcemap,
                 file: './dist/browser.js',
-                format: 'umd',
-                name: 'critical'
+                format: 'es'
             },
             {
-                file: './dist/browser.min.js',
-                plugins: [terser()],
+                sourcemap,
+                file: './dist/browser-umd.js',
                 format: 'iife',
-                name: 'umd'
+                name: 'critical'
             }
         ]
     },

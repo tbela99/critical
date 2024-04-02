@@ -14,13 +14,13 @@ import {basename} from "path";
     ];
 
     urls.map(url => critical(url, {
-        // product: 'firefox',
         html: true,
-        console: false,
-        verbose: false,
-        secure: false,
+        console: true,
+        verbose: true,
+        secure: true,
         headless: true,
         screenshot: true,
+        container: true,
         filename: 'output/' + basename(url).
         replace(/[?#].*$/, '').replace(/[^a-zA-Z0-9@_/-]+/g, '_') + '_critical.css',
         dimensions: '1920x1080 1440x900 1366x768 1024x768 768x1024 320x480'

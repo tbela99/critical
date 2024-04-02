@@ -50,8 +50,6 @@ if (urls.length === 0) {
 }
 
 // @ts-ignore
-// options.container = true;
-
 for (let url of urls) {
 
     critical(url, options).catch(((url) => {

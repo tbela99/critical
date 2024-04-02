@@ -1,5 +1,5 @@
 # CRITICAL PATH GENERATOR
-
+[![npm](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftbela99%2Fcritical%2Fmaster%2Fpackage.json&query=version&logo=npm&label=npm&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2F%40tbela99%2Fcritical)](https://www.npmjs.com/package/@tbela99/critical) [![NPM Downloads](https://img.shields.io/npm/dm/%40tbela99%2Fcritical)](https://www.npmjs.com/package/@tbela99/critical)
 ![screenshot](https://raw.githubusercontent.com/tbela99/critical/master/screenshot.png)
 
 Critical path generator tools using node oe the web browser.
@@ -10,14 +10,17 @@ Extract critical CSS path for the current viewport in the current page.
 
 ```html
 
-<script src="./dist/browser.js"></script>
-<script>
+<script type="module">
+  import {parse, render} from 'https://esm.sh/@tbela99/css-parser@0.4.1/web';
+  import {extract} from 'https://esm.sh/@tbela99/critical@0.2.0/browser';
 
-    critical.extract({
-
-    fonts: true
-  // print extracted CSS
-}).then(results => console.log(results.styles.join('\n')));
+  const result = await extract({ fonts: true });
+  // css is optimized using https://www.npmjs.com/package/@tbela99/css-parser
+  // pretty print css
+  const css = await parse(results.styles.join('\n')).then(result => render(result.ast, {minify: false}).code);
+  
+  console.debug(css);
+  
 </script>
 ```
 
@@ -30,21 +33,6 @@ Extract critical CSS path for the current viewport in the current page.
     - transform: _function_ function used to minify css
 
 optimize css using a css parser
-
-```html
-
-<script type="module">
-import {transform} from 'https://esm.sh/@tbela99/css-parser@0.4.1/web';
-import {critical} from 'https://esm.sh/@tbela99/critical@0.2.0';
-
-    critical.extract({
-
-    fonts: true,
-    transform: transform
-  // print extracted CSS
-}).then(results => console.log(results.styles.join('\n')));
-</script>
-```
 
 ### Limitations
 
