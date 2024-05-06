@@ -1,78 +1,62 @@
-#!/usr/bin/env node
-const critical = require(__dirname + "/../dist/critical"), yargs = require("yargs"), {hideBin: hideBin} = require("yargs/helpers");
+#!/usr/bin/env node --enable-source-maps
+import {critical} from '../dist/index.js';
+import yargs from 'yargs';
+import {hideBin} from 'yargs/helpers';
+import cliArgs from '../bin/args.json' assert {type: 'json'};
 
-require("colors");
+// @ts-ignore
+const _yargs = yargs(hideBin(process.argv)).usage(cliArgs.description);
+const aliases = new Map;
 
-const _yargs = yargs(hideBin(process.argv)).command("url [url+] [options+]\nrun the command line tools", "Example: critical-cli -d 800x600 -d 1024x768 -i https://facebook.com").option("headless", {
-    alias: "t",
-    description: "enable or disable headless mode",
-    type: "boolean",
-    defaultDescription: "true"
-}).option("browser", {
-    alias: "b",
-    default: "chromium",
-    description: "browser to use",
-    choices: [ "chromium", "firefox", "webkit", "edge", "chrome" ],
-    defaultDescription: "chromium",
-    type: "string"
-}).option("screenshot", {
-    alias: "i",
-    description: "Generate screenshots",
-    type: "boolean"
-}).option("secure", {
-    alias: "s",
-    description: "enable or disable security settings such as CSP and same origin policy",
-    type: "boolean"
-}).option("output", {
-    alias: "o",
-    description: "Output directory",
-    type: "string"
-}).option("filename", {
-    alias: "n",
-    description: "prefix of the generated files",
-    type: "string"
-}).option("width", {
-    alias: "w",
-    description: "Viewport width",
-    type: "number"
-}).option("height", {
-    alias: "a",
-    description: "Viewport height",
-    type: "number"
-}).option("dimensions", {
-    alias: "d",
-    type: "array",
-    description: "Array of viewports, override height/width settings",
-    defaultDescription: "'1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'"
-}).option("fonts", {
-    alias: "f",
-    description: "Generate javascript to load fonts dynamically",
-    type: "boolean",
-    defaultDescription: "true"
-}).option("console", {
-    alias: "l",
-    description: "Show console messages from the browser",
-    type: "boolean",
-    defaultDescription: "true"
-}).option("container", {
-    alias: "c",
-    description: "Disable additional security settings to run inside a container",
-    type: "boolean"
-}).option("html", {
-    alias: "p",
-    description: "Generate an HTML page containing inlined critical css",
-    type: "boolean"
-}).option("verbose", {
-    alias: "v",
-    description: "Enable verbose mode",
-    type: "boolean"
-}).help().alias("help", "h"), options = _yargs.argv, urls = options._;
+aliases.set('h', 'help');
 
-for (let key of Object.keys(options)) 1 == key.length && "_" != key && delete options[key];
+for (const [name, command] of Object.entries(cliArgs.args)) {
 
-delete options._, delete options.$0, 0 == urls.length && (_yargs.showHelp(), process.exit()), 
-options.container = !0;
+    if (aliases.has(command.alias)) {
 
-for (let url of urls) critical.critical(url, options).catch((error => {
-    process.stderr.write(error);
-}));
+        throw new Error(`'${name}': Alias ${command.alias} already in use by ${aliases.get(command.alias)}'`);
+    }
+
+    aliases.set(command.alias, name);
+    _yargs.option(name, command);
+}
+
+_yargs.help().alias('help', 'h');
+
+const options = _yargs.argv;
+
+// @ts-ignore
+const urls = options._;
+
+for (let key of Object.keys(options)) {
+
+    if (key.length === 1 && key !== '_') {
+
+        // @ts-ignore
+        delete options[key];
+    }
+}
+
+
+// @ts-ignore
+delete options._;
+// @ts-ignore
+delete options.$0;
+
+if (urls.length === 0) {
+
+    _yargs.showHelp();
+    process.exit();
+}
+
+// @ts-ignore
+for (let url of urls) {
+
+    critical(url, options).catch(((url) => {
+
+        return (error) => {
+
+            process.stderr.write(url + '\n' + error);
+        }
+    })(url));
+}

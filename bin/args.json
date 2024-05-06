@@ -1,0 +1,128 @@
+{
+  "description": "$0 [options+] url [url+]\nrun the command line tools:\nExample: $0 -d 800x600 -d 1024x768 -i https://facebook.com",
+  "args": {
+    "headless": {
+      "alias": "t",
+      "demandOption": false,
+      "description": "enable or disable headless mode",
+      "type": "boolean",
+      "default": true
+    },
+    "browser": {
+      "alias": "b",
+      "demandOption": false,
+      "default": "chromium",
+      "description": "browser to use",
+      "choices": [
+        "chromium",
+        "firefox",
+        "webkit",
+        "edge",
+        "chrome"
+      ],
+      "type": "string"
+    },
+    "browser-type": {
+      "alias": "k",
+      "demandOption": false,
+      "description": "use a mobile browser",
+      "choices": [
+        "mobile",
+        "desktop"
+      ],
+      "type": "string"
+    },
+    "randomBrowser": {
+      "alias": "r",
+      "demandOption": false,
+      "description": "use a random browser",
+      "type": "boolean",
+      "default": false
+    },
+    "screenshot": {
+      "alias": "i",
+      "demandOption": false,
+      "description": "Generate screenshots",
+      "type": "boolean"
+    },
+    "secure": {
+      "alias": "s",
+      "demandOption": false,
+      "description": "enable or disable security settings such as CSP and same origin policy",
+      "type": "boolean"
+    },
+    "color-scheme": {
+      "alias": "m",
+      "demandOption": false,
+      "description": "color scheme",
+      "type": "string",
+      "choices": [
+        "light",
+        "dark"
+      ],
+      "default": "dark"
+    },
+    "output": {
+      "alias": "o",
+      "demandOption": false,
+      "description": "Output directory",
+      "type": "string"
+    },
+    "filename": {
+      "alias": "n",
+      "demandOption": false,
+      "description": "prefix of the generated files",
+      "type": "string"
+    },
+    "width": {
+      "alias": "w",
+      "demandOption": false,
+      "description": "Viewport width",
+      "type": "number"
+    },
+    "height": {
+      "alias": "a",
+      "demandOption": false,
+      "description": "Viewport height",
+      "type": "number"
+    },
+    "dimensions": {
+      "alias": "d",
+      "demandOption": false,
+      "type": "array",
+      "description": "Array of viewports, override height/width settings"
+    },
+    "fonts": {
+      "alias": "f",
+      "demandOption": false,
+      "description": "Generate javascript to load fonts dynamically",
+      "type": "boolean",
+      "default": true
+    },
+    "console": {
+      "alias": "l",
+      "demandOption": false,
+      "description": "Show console messages from the browser",
+      "type": "boolean"
+    },
+    "container": {
+      "alias": "c",
+      "demandOption": false,
+      "description": "Disable additional security settings to run inside a container",
+      "type": "boolean"
+    },
+    "html": {
+      "alias": "p",
+      "demandOption": false,
+      "description": "Generate an HTML page containing inlined critical css",
+      "type": "boolean"
+    },
+    "verbose": {
+      "alias": "v",
+      "demandOption": false,
+      "description": "Enable verbose mode",
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

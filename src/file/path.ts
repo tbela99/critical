@@ -1,18 +1,14 @@
-/**
- * resolve to absolute for external urls, relative for same domain
- * @param {string} path
- * @param {string} from
- * @returns {string}
- */
-export function resolve(path, from) {
+
+export function resolve(path: string, from: string): string {
 
     if (path.match(/^['"]?data:/)) {
 
         return path;
     }
 
-    const baseURL = new URL(from, window.location);
-    const pathURL = new URL(path, baseURL);
+    // @ts-ignore
+    const baseURL: URL = new URL(from, window.location);
+    const pathURL: URL = new URL(path, baseURL);
 
     if (baseURL.protocol != pathURL.protocol ||
         baseURL.host != pathURL.host ||
