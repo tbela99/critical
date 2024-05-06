@@ -1,23 +1,26 @@
 
 import {critical} from '../dist/index.js';
-import {basename} from "path";
+import {basename} from "node:path";
 
     const urls = [
-        'https://www.npmjs.com/package/@tbela99/css-parser',
+        // 'https://www.npmjs.com/package/@tbela99/css-parser',
         // 'https://www.linkedin.com',
-        'https://css-tricks.com/lodge/svg/09-svg-data-uris/',
-        'https://facebook.com',
-        'https://getbootstrap.com/',
-        'https://getbootstrap.com/docs/5.3/getting-started/introduction/',
-        'https://getbootstrap.com/docs/5.3/examples/',
-        'https://www.microsoft.com/fr-ca/microsoft-365'
+        // 'https://css-tricks.com/lodge/svg/09-svg-data-uris/',
+        // 'https://facebook.com',
+        // 'https://getbootstrap.com/',
+        // 'https://getbootstrap.com/docs/5.3/getting-started/introduction/',
+        // 'https://getbootstrap.com/docs/5.3/examples/',
+        // 'https://www.microsoft.com/fr-ca/microsoft-365',
+       // dirname( new URL(import.meta.url).pathname) + '/playground.html',
+        'http://localhost:3004/playground.html'
     ];
 
     urls.map(url => critical(url, {
         html: true,
         console: true,
         verbose: true,
-        secure: true,
+        secure: false,
+        fonts: true,
         headless: true,
         screenshot: true,
         container: true,

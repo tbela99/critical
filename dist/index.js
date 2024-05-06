@@ -9,10 +9,9 @@ import { transform, render } from '@tbela99/css-parser';
 import { createRequire } from 'node:module';
 
 const __dirname = dirname(new URL(import.meta.url).pathname);
-// basename(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
-const script = readFileSync(require.resolve('@tbela99/critical/browser'), { encoding: "utf-8" });
-const minify = readFileSync(require.resolve('@tbela99/css-parser/umd'), { encoding: "utf-8" });
+const script = readFileSync(require.resolve('@tbela99/critical/umd'), { encoding: "utf-8" });
+console.error(require.resolve('@tbela99/critical/umd'));
 // @ts-ignore
 const deviceNames = Object.values(devices);
 async function sleep(duration) {
@@ -162,7 +161,7 @@ async function critical(url, options = {}) {
             });
         }
         await context.addInitScript(script);
-        await context.addInitScript(minify);
+        // await context.addInitScript(minify);
         const page = await context.newPage();
         await page.emulateMedia({
             colorScheme: options.colorScheme,
@@ -194,8 +193,6 @@ async function critical(url, options = {}) {
             console.info(chalk.blue(`[${shortUrl}${size}]> collect critical data`));
         }
         const data = await page.evaluate(async (param) => {
-            // @ts-ignore
-            param.options.transform = CSSParser.transform;
             // @ts-ignore
             return await critical.extract(param.options).then((result) => {
                 if (Array.isArray(result.fonts)) {
@@ -243,7 +240,7 @@ async function critical(url, options = {}) {
         // @ts-ignore
         writeFile(minCssFile, code, function (error) {
             if (error) {
-                console.error({ error });
+                console.error(error);
             }
         });
         console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(cssFile + ' [' + size(unminified.length) + ']'));

@@ -43,7 +43,6 @@ export interface CriticalExtractOptions {
     fonts?: boolean;
     html?: boolean;
     signal?: AbortSignal;
-    transform?: (css: string, options: TransformOptions = {}) => Promise<TransformResult>
 }
 
 export interface CriticalResult {

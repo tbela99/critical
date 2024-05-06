@@ -1,5 +1,25 @@
 {
-  "version": "0.2.0",
+  "version": "1.0.0",
+  "name": "@tbela99/critical",
+  "description": "Extract critical CSS from HTML pages to enable instantaneous rendering",
+  "type": "module",
+  "typings": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "browser": "./dist/browser.js",
+  "author": "Thierry Bela",
+  "license": "MIT OR LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/tbela99/critical/issues"
+  },
+  "homepage": "https://github.com/tbela99/critical#readme",
+  "bin": {
+    "critical-cli": "bin/critical-cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./browser": "./dist/browser.js",
+    "./umd": "./dist/browser-umd.js"
+  },
   "scripts": {
     "test": "node test/run.js",
     "build": "rollup -c"
@@ -8,20 +28,9 @@
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
-    "@tbela99/css-parser": "^0.4.1",
+    "@tbela99/css-parser": "^0.5.1",
     "chalk": "^5.3.0",
-    "playwright": "^1.24.2",
     "yargs": "^17.7.2"
-  },
-  "name": "@tbela99/critical",
-  "description": "Extract critical CSS from HTML pages to enable instantaneous rendering",
-  "type": "module",
-  "main": "dist/index.js",
-  "browser": "dist/browser.js",
-  "exports": {
-    ".": "./dist/index.js",
-    "./browser": "./dist/browser.js",
-    "./umd": "./dist/browser-umd.js"
   },
   "directories": {
     "test": "test"
@@ -38,15 +47,6 @@
     "critical-path",
     "critical-css"
   ],
-  "author": "Thierry Bela",
-  "license": "MIT OR LGPL-3.0",
-  "bugs": {
-    "url": "https://github.com/tbela99/critical/issues"
-  },
-  "homepage": "https://github.com/tbela99/critical#readme",
-  "bin": {
-    "critical-cli": "bin/critical-cli.js"
-  },
   "devDependencies": {
     "@esm-bundle/chai": "^4.3.4-fix.0",
     "@rollup/plugin-commonjs": "^25.0.7",
@@ -61,7 +61,7 @@
     "@web/test-runner-playwright": "^0.11.0",
     "c8": "^9.1.0",
     "mocha": "^10.4.0",
-    "playwright": "^1.42.1",
+    "playwright": "^1.43.1",
     "rollup": "^4.13.0",
     "rollup-plugin-dts": "^6.1.0",
     "tslib": "^2.6.2"

@@ -2,8 +2,8 @@ import * as playwright from "playwright";
 import {devices} from "playwright";
 import {resolve, dirname, basename} from "path";
 import {mkdir, readFileSync, writeFile} from "fs";
-import {fontscript} from "./critical/fontscript";
-import {size} from "./file/size";
+import {fontscript} from "./critical/fontscript.js";
+import {size} from "./file/size.js";
 import {
     BrowserOptions,
     CriticalCliResult, CriticalCliStats,
@@ -15,15 +15,14 @@ import {
 } from "./@types";
 import {Request, ConsoleMessage, BrowserType, Browser, BrowserContext, LaunchOptions, Page} from "playwright";
 import chalk from "chalk";
-import {render, transform, TransformOptions, TransformResult} from "@tbela99/css-parser";
+import {render, transform} from "@tbela99/css-parser";
 import {createRequire} from 'node:module';
 
 const __dirname: string = dirname(new URL(import.meta.url).pathname);
-// basename(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
 
-const script: string = readFileSync(require.resolve('@tbela99/critical/browser'), {encoding: "utf-8"});
-const minify: string = readFileSync(require.resolve('@tbela99/css-parser/umd'), {encoding: "utf-8"});
+const script: string = readFileSync(require.resolve('@tbela99/critical/umd'), {encoding: "utf-8"});
+
 // @ts-ignore
 const deviceNames: Array<{
     userAgent: string;
@@ -251,7 +250,7 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
         }
 
         await context.addInitScript(script);
-        await context.addInitScript(minify);
+        // await context.addInitScript(minify);
 
         const page: Page = await context.newPage();
 
@@ -302,13 +301,6 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
         }
 
         const data = await page.evaluate(async (param: { options: CriticalExtractOptions }) => {
-
-            // @ts-ignore
-            param.options.transform = (<{
-                    transform: (css: string, options: TransformOptions) => TransformResult
-                    // @ts-ignore
-                }>CSSParser
-            ).transform;
 
             // @ts-ignore
             return await critical.extract(param.options).then((result: CriticalResult) => {
@@ -381,7 +373,7 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
             if (error) {
 
-                console.error({error});
+                console.error(error);
             }
         });
 

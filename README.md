@@ -8,19 +8,39 @@ Critical path generator tools using node oe the web browser.
 
 Extract critical CSS path for the current viewport in the current page.
 
+Using modules
 ```html
 
 <script type="module">
-  import {parse, render} from 'https://esm.sh/@tbela99/css-parser@0.4.1/web';
-  import {extract} from 'https://esm.sh/@tbela99/critical@0.2.0/browser';
+  import {parse, render} from 'https://esm.sh/@tbela99/css-parser/web';
+  import {extract} from 'https://esm.sh/tbela99/critical/browser';
 
   const result = await extract({ fonts: true });
   // css is optimized using https://www.npmjs.com/package/@tbela99/css-parser
   // pretty print css
   const css = await parse(results.styles.join('\n')).then(result => render(result.ast, {minify: false}).code);
-  
+
   console.debug(css);
+
+</script>
+```
+
+Without using modules
+```html
+
+<script src="./dist/browser-umd.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tbela99/css-parser/dist/index-umd-web.js"></script>
+<script>
   
+  const {parse, render} = CSSParser;
+  const {extract} = critical;
+
+  const result = await extract({fonts: true});
+  // optimize and pretty print css
+  const css = await parse(results.styles.join('\n')).then(result => render(result.ast, {minify: false}).code);
+
+  console.debug(css);
+
 </script>
 ```
 
@@ -30,9 +50,6 @@ Extract critical CSS path for the current viewport in the current page.
     - fonts: _bool?_ generate Javascript to load web fonts dynamically
     - html: _bool?_ generate an HTML page containing inlined critical css
     - signal: _AbortSignal?_ abort critical extraction using AbortSignal
-    - transform: _function_ function used to minify css
-
-optimize css using a css parser
 
 ### Limitations
 
@@ -89,7 +106,7 @@ urls.forEach(async url => critical(url, {
     - dimensions: _array_ or _string_. array of viewports. this takes precedence over height and width. viewports can be
       specified as objects with width and height property or a string.
   > output settings    
-    - html: _bool_. generate an HTML page containing inlined critical css
+    - html: _bool_. generate an HTML page containing the inlined critical css
     - output: _string_. change output directory. default _'./output/'_
     - fonts: _bool_. generate javascript to load web fonts. default _true_
   > debugging settings
@@ -149,3 +166,13 @@ Options:
 
 $ critical-cli https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768'
 ```
+## CHANGELOG
+
+### V1.0.0
+
+- converted to typescript
+- changed default export to es module
+- optimized generated css (merge rule, remove duplicate, minify, generate nested css)
+- specify color scheme [dark/light]
+
+

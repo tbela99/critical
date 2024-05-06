@@ -8,49 +8,35 @@ import {
     MatchCSSStyleSheet,
     RuleList
 } from "../@types";
-import {TransformResult} from "@tbela99/css-parser";
 
-function abortSignal() {
-
-    throw new Error(`CSS extraction aborted`);
-}
-
-/**
- * {Object} options
- * - signal {AbortSignal?} abort css extraction
- * - html {bool?} generate HTML for each viewport
- * - fonts {bool?} generate javascript to download fonts
- *
- * @returns {Promise<{styles: string[], fonts: object[], stats: object, html: string?}>}
- */
-export async function extract(options: CriticalExtractOptions): Promise<CriticalResult> {
+export async function extract(options: CriticalExtractOptions = {}) {
 
     const document: Document = window.document;
     const location: Location = window.location;
-    const styles: Set<string> = new Set<string>;
-    const excluded: string[] = ['all', 'print', ''];
-    const allStylesheets: MatchCSSStyleSheet[] = new Array<MatchCSSStyleSheet>();
+    const styles: Set<string> = new Set;
+    const excluded = ['all', 'print', ''];
+    const allStylesheets: MatchCSSStyleSheet[] = [];
 
+    // Get a list of all the elements in the view.
     const height = window.innerHeight;
     const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: () => NodeFilter.SHOW_ELEMENT});
 
-    const fonts: Set<RuleList> = new Set<RuleList>();
+    const fonts: Set<CSSFontFaceRule> = new Set;
     const fontFamilies: Set<string> = new Set;
     const files: Map<CSSStyleSheet, FileMapObject> = new Map;
     const weakMap: WeakMap<RuleList | CSSStyleSheet, number> = new WeakMap;
-    const nodeMap: WeakMap<Node, number> = new WeakMap;
+    const nodeMap: Set<Node> = new Set;
     let nodeCount: number = 0;
-    let k;
-    let rule: RuleList;
-    let rules: CSSRuleList;
-
-    options.signal?.addEventListener('abort', abortSignal);
+    let k: number;
+    let rule: CSSMediaRule | CSSStyleRule;
+    let rules;
 
     performance.mark('filterStylesheets');
 
     for (k = 0; k < document.styleSheets.length; k++) {
 
-        rule = document.styleSheets[k];
+        // @ts-ignore
+        rule = <CSSMediaRule>document.styleSheets[k];
 
         if (rule.media.mediaText === 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
 
@@ -59,16 +45,19 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
         try {
 
-            rules = rule.cssRules || rule.rules;
+
+            // @ts-ignore
+            rules = (<CSSStyleSheet>rule).cssRules ?? (<CSSStyleSheet>rule).rules;
 
             for (let l = 0; l < rules.length; l++) {
 
                 allStylesheets.push({rule: rules[l], match: false})
             }
 
-        } catch (e: any) {
+        } catch (e) {
 
-            console.error(JSON.stringify({'message': e.message + '\n' + e.stack, stylesheet: rule.href}, null, 1));
+            // @ts-ignore
+            console.error(JSON.stringify({'message': e.message, stylesheet: rule.href}, null, 1));
         }
     }
 
@@ -76,18 +65,16 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
     if (allStylesheets.length === 0) {
 
-        // @ts-ignore
         return {styles: [], fonts: [], stats: {}};
     }
 
-    let node: Element;
+    let node;
     let rect;
     let allStylesLength = allStylesheets.length;
 
     performance.mark('nodeWalking');
 
-    // @ts-ignore
-    while ((node = walker.nextNode())) {
+    while ((node = <HTMLElement>walker.nextNode())) {
 
         if (options && options.signal && options.signal.aborted) {
 
@@ -100,12 +87,11 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
         }
 
         nodeCount++;
-        // @ts-ignore
         rect = node.getBoundingClientRect();
 
         if (rect.top < height) {
 
-            nodeMap.set(node, 1);
+            nodeMap.add(node);
         }
     }
 
@@ -167,8 +153,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
             try {
 
                 const rule = allStylesheets[k].rule;
-                const rules: RuleList[] = [];
-
+                const rules = [];
                 // @ts-ignore
                 const sheet = rule instanceof CSSImportRule ? rule.styleSheet.cssRules || rule.styleSheet.rules : rule.cssRules || rule.rules;
 
@@ -176,7 +161,6 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
                     if (!weakMap.has(sheet[l])) {
 
-                        // @ts-ignore
                         rules.push({rule: sheet[l], match: false})
                     }
                 }
@@ -187,10 +171,10 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                     allStylesheets.splice.apply(allStylesheets, [k + 1, 0].concat(rules))
                     allStylesLength = allStylesheets.length
                 }
-            } catch (e: any) {
+            } catch (e) {
 
                 // @ts-ignore
-                console.error(JSON.stringify({'message': e.message + '\n' + e.stack, stylesheet: rule.href}, null, 1));
+                console.error(JSON.stringify({'message': e.message, stylesheet: rule.href}, null, 1));
             }
         } else if (allStylesheets[k].rule instanceof CSSFontFaceRule) {
 
@@ -219,13 +203,16 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                 continue;
             }
 
+            // @ts-ignore
             rule = allStylesheets[k].rule;
             let fileUpdate = false;
 
-            if (!files.has(<CSSStyleSheet>rule.parentStyleSheet)) {
+            // @ts-ignore
+            if (!files.has(rule.parentStyleSheet)) {
 
                 //
-                files.set(<CSSStyleSheet>rule.parentStyleSheet, {
+                // @ts-ignore
+                files.set(rule.parentStyleSheet, {
 
                     // @ts-ignore
                     base: (rule.parentStyleSheet.href && rule.parentStyleSheet.href.replace(/[?#].*/, '') || location.pathname).replace(/([^/]+)$/, ''),
@@ -235,34 +222,35 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
                 fileUpdate = true;
             } else { // @ts-ignore
-                if (file && file !== files.get(rule.parentStyleSheet).file) {
+                if (file != null && file !== files.get(rule.parentStyleSheet).file) {
 
-                                fileUpdate = true;
-                            }
+                    fileUpdate = true;
+                }
             }
 
             if (fileUpdate) {
 
-                // @ts-ignore
                 try {
 
-                    console.log('analysing ' + (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).file);
-                    styles.add('/* file: ' + (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).file + ' */');
-                } catch (e: any) {
+                    // @ts-ignore
+                    console.log('analysing ' + files.get(rule.parentStyleSheet).file);
+                    // @ts-ignore
+                    styles.add('/* file: ' + files.get(rule.parentStyleSheet).file + ' */');
+                } catch (e) {
 
-                    console.error(JSON.stringify(e.message + '\n' + e.stack, null, 1));
+                    // @ts-ignore
+                    console.error(JSON.stringify(e.message, null, 1));
                     console.error(JSON.stringify(rule?.parentStyleSheet?.href, null, 1));
                 }
             }
 
             file = (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).file;
-            // @ts-ignore
             css = rule.cssText;
 
             if (file !== 'inline') {
 
                 // resolve url()
-                css = css.replace(/url\(([^)%\s]*?)\)/g, function (all: string, one: string) {
+                css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {
 
                     one = one.trim();
 
@@ -273,11 +261,11 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
                     one = one.replace(/^(['"])([^\1\s]+)\1/, '$2');
 
-                    return 'url(' + resolve(one, (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).base) + ')';
+                    // @ts-ignore
+                    return 'url(' + resolve(one, files.get(rule.parentStyleSheet).base) + ')';
                 })
             }
 
-            // @ts-ignore
             while (rule.parentRule) {
 
                 /**
@@ -300,7 +288,6 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                     css = '@' + rule.constructor.name.replace(/^CSS(.*?)Rule/, '$1').toLowerCase() + ' ' + rule.conditionText + ' {' + css + '}';
                 }
 
-                // @ts-ignore
                 if (!rule.parentRule) {
 
                     break;
@@ -309,7 +296,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
             if (rule.parentStyleSheet) {
 
-                let media: string = rule.parentStyleSheet.media.mediaText;
+                let media = rule.parentStyleSheet.media.mediaText;
 
                 if (media === 'print') {
 
@@ -332,29 +319,26 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
     performance.measure('rules extraction', 'rulesExtraction');
 
-    const usedFonts: Map<string, FontObject> = new Map<string, FontObject>;
+    const usedFonts = new Map;
 
-    // @ts-ignore
     if (options.fonts) {
 
         let j;
         let name;
         let value;
-        let font: RuleList;
-        let fontObject: FontObject;
+        let font: CSSFontFaceRule;
+        let fontObject;
         let src;
 
         performance.mark('fontsExtraction');
 
         for (font of fonts) {
 
-            // @ts-ignore
             if (font.style.getPropertyValue('font-family').split(/\s*,\s*/).some(token => {
 
                 return fontFamilies.has(token.replace(/(['"])([^\1\s]+)\1/, '$2'));
             })) {
 
-                // @ts-ignore
                 src = font.style.getPropertyValue('src');
 
                 if (!src) {
@@ -363,48 +347,50 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
                 }
 
                 fontObject = {
-                    // @ts-ignore
                     'fontFamily': font.style.getPropertyValue('font-family').replace(/(['"])([^\1\s]+)\1/, '$2'),
-                    src: src.replace(/(^|[,\s*])local\([^)]+\)\s*,?\s*?/g, '').replace(/url\(([^)%\s]+)\)([^,]*)(,?)\s*/g, (all: string, one: string, two: string, three: string) => {
+                    src: src.replace(/(^|[,\s*])local\([^)]+\)\s*,?\s*?/g, '').replace(/url\(([^)%\s]+)\)([^,]*)(,?)\s*/g, (all, one, two, three) => {
 
                         one = one.replace(/(['"])([^\1\s]+)\1/, '$2');
 
-                        if (!files.has(<CSSStyleSheet>font.parentStyleSheet)) {
+                        // @ts-ignore
+                        if (!files.has(font.parentStyleSheet)) {
 
-                            if (!(<CSSStyleSheet>font.parentStyleSheet).href) {
+                            // @ts-ignore
+                            if (!font.parentStyleSheet.href) {
 
                                 return all;
                             }
 
-                            files.set(<CSSStyleSheet>font.parentStyleSheet, {
+                            // @ts-ignore
+                            files.set(font.parentStyleSheet, {
 
                                 // @ts-ignore
                                 base: font.parentStyleSheet.href.replace(/([^/]+)$/, ''),
                                 // @ts-ignore
                                 file: font.parentStyleSheet.href
                             })
+
                         }
 
-                        return 'url(' + resolve(one, (<FileMapObject>files.get(<CSSStyleSheet>font.parentStyleSheet)).base) + ')' + three;
+                        // @ts-ignore
+                        return 'url(' + resolve(one, files.get(font.parentStyleSheet).base) + ')' + three;
                     }).trim(),
                     properties: {}
                 }
 
-                // @ts-ignore
                 j = font.style.length;
 
                 while (j--) {
 
-                    // @ts-ignore
                     name = font.style.item(j);
-                    // @ts-ignore
                     value = font.style.getPropertyValue(name);
 
                     name !== 'font-family' &&
                     name !== 'src' &&
                     value !== '' &&
                     value !== undefined &&
-                    (fontObject.properties[name.replace(/([A-Z])/g, (all: string, name: string) => '-' + name.toLowerCase())] = value)
+                    // @ts-ignore
+                    (fontObject.properties[name.replace(/([A-Z])/g, (all, name) => '-' + name.toLowerCase())] = value)
                 }
 
                 usedFonts.set(JSON.stringify(fontObject), fontObject)
@@ -427,7 +413,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
     const result: CriticalResult = {
         styles: [...styles],
-        fonts: <FontObject[]>[...usedFonts.values()],
+        fonts: [...usedFonts.values()],
         nodeCount,
         stats: {nodeCount, stats}
     };
@@ -436,7 +422,7 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
         if (!document.querySelector('base')) {
 
-            const base: HTMLBaseElement = document.createElement('base');
+            const base = document.createElement('base');
 
             base.href = location.protocol + '//' + location.host + location.pathname;
             document.head.insertBefore(base, document.querySelector('meta[charset]')?.nextElementSibling || document.head.firstChild)
@@ -444,12 +430,13 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
         if (!document.querySelector('meta[charset]')) {
 
-            const meta: HTMLMetaElement = document.createElement('meta');
+            const meta = document.createElement('meta');
             meta.setAttribute('charset', 'utf-8');
             document.head.insertBefore(meta, document.head.firstChild)
         }
 
-        Array.from((<NodeListOf<HTMLStyleElement | HTMLLinkElement>>document.querySelectorAll('style,link[rel=stylesheet]'))).forEach((node: HTMLStyleElement | HTMLLinkElement) => {
+        // @ts-ignore
+        Array.from(document.querySelectorAll('style,link[rel=stylesheet]')).forEach((node: HTMLLinkElement | HTMLStyleElement) => {
 
             document.body.append(node);
 
@@ -462,64 +449,66 @@ export async function extract(options: CriticalExtractOptions): Promise<Critical
 
                 if (node.hasAttribute('media')) {
 
-                    // @ts-ignore
                     node.setAttribute('data-media', node.media);
                 }
 
-                // @ts-ignore
                 node.media = 'print';
-                // @ts-ignore
                 node.dataset.async = '';
             }
         });
+
+        const script: HTMLScriptElement = document.createElement('script');
+
+        script.textContent = `
+        window.addEventListener('DOMContentLoaded', () => Array.from(document.querySelectorAll('link[data-async]')).forEach(node => {
+
+                if(!node.hasAttribute('data-media')) {
+                    node.removeAttribute('media');
+                }
+                else {
+                    node.media=node.dataset.media;
+                    node.removeAttribute('data-media')
+                }
+                
+                node.removeAttribute('data-async');
+        }))`;
+
+        document.head.append(script);
 
         // add data-attribute
         const style: HTMLStyleElement = document.createElement('style');
         // @ts-ignore
         style.dataset.critical = true;
-        const css: string = [...usedFonts.values()].map((entry: FontObject): string => {
+        style.textContent = [...usedFonts.values()].map((entry) => {
 
-                return '@font-face {' + '\n ' + Object.entries(entry).map((entry: [string, string | {
-                    [key: string]: string
-                }]): string => {
+                return '@font-face {' + '\n ' + Object.entries(entry).map(entry => {
 
-                    return typeof entry[1] == 'string' ? `${entry[0] + ': ' + entry[1]}` : Object.entries(entry[1]).map((entry: [string, string]): string => `${entry[0] + ': ' + entry[1]}`).join(';\n ') + '\n}'
+                    // @ts-ignore
+                    return typeof entry[1] == 'string' ? `${entry[0] + ': ' + entry[1]}` : Object.entries(entry[1]).map(entry => `${entry[0] + ': ' + entry[1]}`).join(';\n ') + '\n}'
                 }).join(';\n')
             }).join('\n') +
             '\n' + (<string[]>result.styles).join('\n');
 
-        if (options.transform != null) {
+        if (style.textContent.trim() !== '') {
 
-            await options.transform(css).then((parseResult: TransformResult) => style.textContent = parseResult.code);
+            document.head.insertBefore(style, <HTMLBaseElement | null>document.querySelector('base')?.nextElementSibling);
         }
 
-        else {
+        if ((<FontObject[]>result.fonts).length > 0) {
 
-            style.textContent = css;
-        }
-
-        if (style.innerText.trim() !== '') {
-
-            document.head.insertBefore(style, (<HTMLBaseElement>document.querySelector('base'))?.nextElementSibling);
-        }
-
-        if ((<string[]>result.fonts).length > 0) {
-
-            const script: HTMLScriptElement = document.createElement('script');
+            const script = document.createElement('script');
             script.textContent = fontscript(<FontObject[]>result.fonts);
             document.head.append(script);
         }
 
-        options?.signal?.removeEventListener('abort', abortSignal);
+        const doctype: DocumentType = document.doctype as DocumentType;
 
-        const doctype: DocumentType | null = document.doctype;
-
-        result.html = (doctype ? `<!Doctype ${doctype.name}`
+        result.html = `<!Doctype ${doctype.name}`
             + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
             + (doctype.systemId
                 ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
                 : ``)
-            + `>` + '\n' : '') + document.documentElement.outerHTML
+            + `>` + '\n' + document.documentElement.outerHTML
     }
 
     return result;

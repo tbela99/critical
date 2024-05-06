@@ -2,7 +2,7 @@
 import {critical} from '../dist/index.js';
 import yargs from 'yargs';
 import {hideBin} from 'yargs/helpers';
-import {default as cliArgs} from '../bin/args.json' assert {type: 'json'};
+import cliArgs from '../bin/args.json' assert {type: 'json'};
 
 // @ts-ignore
 const _yargs = yargs(hideBin(process.argv)).usage(cliArgs.description);
