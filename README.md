@@ -70,7 +70,7 @@ const urls = [
 ];
 
 urls.forEach(async url => critical(url, {
-    html: false,
+    html: true,
     console: true,
     screenshot: true,
     secure: false,
@@ -125,9 +125,9 @@ $ critical-cli -i http://google.com
 Usage
 
 ```shell
-$ critical-cli.js [options+] url [url+]
+$ critical-cli [options+] url [url+]
 run the command line tools:
-Example: critical-cli.js -d 800x600 -d 1024x768 -i https://facebook.com
+Example: critical-cli -d 800x600 -d 1024x768 -i https://facebook.com
 
 Options:
       --version        Show version number                             [boolean]
