@@ -77,6 +77,19 @@ export interface CriticalCliStats {
 export interface CriticalCliResult {
     fonts: Array<string>,
     stats: Array<CriticalCliStats>,
+
+    files: {
+
+        html?: string;
+        fonts?: string;
+        css: {
+
+            min?: string;
+            raw?: string;
+            nested?: string;
+            minNested?: string;
+        }
+    },
     styles: any[];
     html: string
 }

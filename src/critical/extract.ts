@@ -1,6 +1,6 @@
-import {resolve} from "../file/path";
+import {resolve} from "../file";
 import {fontscript} from "./fontscript";
-import {
+import type {
     CriticalExtractOptions,
     CriticalResult,
     FileMapObject,

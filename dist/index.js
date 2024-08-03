@@ -1,9 +1,9 @@
 import * as playwright from 'playwright';
 import { devices } from 'playwright';
-import { dirname, resolve, basename } from 'path';
+import { dirname, resolve, basename } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { fontscript } from './critical/fontscript.js';
 import { size } from './file/size.js';
+import { fontscript } from './critical/fontscript.js';
 import chalk from 'chalk';
 import { transform, render } from '@tbela99/css-parser';
 import { createRequire } from 'node:module';
@@ -69,6 +69,7 @@ async function critical(url, options = {}) {
         await browser.close();
     }
     if (['"', "'"].includes(url.charAt(0))) {
+        // @ts-ignore
         url = url.replace(/^(['"])([^\1\s]+)\1$/, '$2');
     }
     if (!url.match(/^([a-zA-Z]+:)?\/\//)) {
@@ -287,6 +288,12 @@ async function critical(url, options = {}) {
             await sleep(options.pause);
         }
     }
+    let htmlFile = undefined;
+    let fontJS = undefined;
+    let minCssFile = undefined;
+    let rawCssFile = undefined;
+    let nestedCssFile = undefined;
+    let minNestedCssFile = undefined;
     if (options.filename) {
         const rawCSS = [...styles].join('\n');
         const { code, unminified } = (await transform(rawCSS).then(result => {
@@ -299,10 +306,10 @@ async function critical(url, options = {}) {
         if (cssFile.slice(-4) != '.css') {
             cssFile += '.css';
         }
-        const minCssFile = cssFile.slice(0, -4) + '.min.css';
-        const rawCssFile = cssFile.slice(0, -4) + '.raw.css';
-        const minNestedCssFile = cssFile.slice(0, -4) + '.nested.min.css';
-        const nestedCssFile = cssFile.slice(0, -4) + '.nested.css';
+        minCssFile = cssFile.slice(0, -4) + '.min.css';
+        rawCssFile = cssFile.slice(0, -4) + '.raw.css';
+        minNestedCssFile = cssFile.slice(0, -4) + '.nested.min.css';
+        nestedCssFile = cssFile.slice(0, -4) + '.nested.css';
         console.error(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minCssFile + ' [' + size(code.length) + ']'));
         // @ts-ignore
         await writeFile(minCssFile, code);
@@ -323,8 +330,9 @@ async function critical(url, options = {}) {
         if (match) {
             html = html.replace(match[0], `<style data-critical="true">${[...styles].join('\n')}</style>`);
         }
+        htmlFile = options.filename + '.html';
         // @ts-ignore
-        await writeFile(`${options.filename}.html`, html);
+        await writeFile(htmlFile, html);
     }
     const fontObjects = new Set([...fonts].map((font) => JSON.parse(font)));
     if (options.fonts) {
@@ -344,7 +352,19 @@ async function critical(url, options = {}) {
         // @ts-ignore
         await writeFile(fontJS, data);
     }
-    return { styles: [...styles], fonts: [...fonts], stats, html };
+    return {
+        styles: [...styles],
+        files: {
+            html: htmlFile,
+            fonts: fontJS,
+            css: {
+                min: minCssFile,
+                raw: rawCssFile,
+                nested: nestedCssFile,
+                minNested: minNestedCssFile
+            }
+        }, fonts: [...fonts], stats, html
+    };
 }
 
 export { critical };

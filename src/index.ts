@@ -1,10 +1,10 @@
 import * as playwright from "playwright";
 import {Browser, BrowserContext, BrowserType, ConsoleMessage, devices, LaunchOptions, Page, Request} from "playwright";
-import {basename, dirname, resolve} from "path";
+import {basename, dirname, resolve} from "node:path";
 import {readFileSync} from "node:fs";
-import {fontscript} from "./critical/fontscript.js";
-import {size} from "./file/size.js";
-import {
+import {fontscript} from "./critical";
+import {size} from "./file";
+import type {
     BrowserOptions,
     CriticalCliResult,
     CriticalCliStats,
@@ -71,7 +71,7 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
 
         await page.goto(options.input.startsWith('data:') ? options.input : 'data:text/html;base64,' + Buffer.from(options.input).toString('base64'), {waitUntil: 'networkidle'});
 
-        let base = options.base ?? 'file://' + process.cwd();
+        let base: string = options.base ?? 'file://' + process.cwd();
 
         if (!base.endsWith('/')) {
 
@@ -116,6 +116,7 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
 
     if (['"', "'"].includes(url.charAt(0))) {
 
+        // @ts-ignore
         url = url.replace(/^(['"])([^\1\s]+)\1$/, '$2');
     }
 
@@ -439,6 +440,13 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
         }
     }
 
+    let htmlFile: string | undefined = undefined;
+    let fontJS: string | undefined = undefined;
+    let minCssFile: string | undefined = undefined;
+    let rawCssFile: string | undefined = undefined;
+    let nestedCssFile: string | undefined = undefined;
+    let minNestedCssFile: string | undefined = undefined;
+
     if (options.filename) {
 
         const rawCSS: string = [...styles].join('\n');
@@ -461,11 +469,11 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
             cssFile += '.css';
         }
 
-        const minCssFile: string = cssFile.slice(0, -4) + '.min.css';
-        const rawCssFile: string = cssFile.slice(0, -4) + '.raw.css';
+        minCssFile = cssFile.slice(0, -4) + '.min.css' as string;
+        rawCssFile = cssFile.slice(0, -4) + '.raw.css' as string;
 
-        const minNestedCssFile: string = cssFile.slice(0, -4) + '.nested.min.css';
-        const nestedCssFile: string = cssFile.slice(0, -4) + '.nested.css';
+        minNestedCssFile = cssFile.slice(0, -4) + '.nested.min.css' as string;
+        nestedCssFile = cssFile.slice(0, -4) + '.nested.css' as string;
 
         console.error(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minCssFile + ' [' + size(code.length) + ']'));
         // @ts-ignore
@@ -499,8 +507,9 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
             html = html.replace(match[0], `<style data-critical="true">${[...styles].join('\n')}</style>`);
         }
 
+        htmlFile = options.filename + '.html';
         // @ts-ignore
-        await writeFile(`${options.filename}.html`, html);
+        await writeFile(htmlFile, html);
     }
 
     const fontObjects: Set<FontObject> = <Set<FontObject>>new Set([...fonts].map((font: string) => JSON.parse(font)));
@@ -529,5 +538,20 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
         await writeFile(fontJS, data);
     }
 
-    return {styles: [...styles], fonts: [...fonts], stats, html};
+    return {
+        styles: [...styles],
+        files: {
+
+            html: htmlFile,
+            fonts: fontJS,
+            css: {
+
+                min: minCssFile,
+                raw: rawCssFile,
+                nested: nestedCssFile,
+                minNested: minNestedCssFile
+            }
+
+        }, fonts: [...fonts], stats, html
+    };
 }

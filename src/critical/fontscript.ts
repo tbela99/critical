@@ -1,4 +1,4 @@
-import {FontObject} from "../@types";
+import type {FontObject} from "../@types";
 
 export function fontscript(fonts: FontObject[]): string {
 

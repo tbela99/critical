@@ -1,9 +1,31 @@
+/**
+ *
+ * @param {string[]} content
+ * @param {string} filename
+ * @param {string} mimetype
+ * @return {Promise<string[]>}
+ */
+async function download(content, filename, mimetype = 'application/octet-stream; charset=utf-8') {
+    //
+    const url = URL.createObjectURL(new Blob(content, { type: mimetype }));
+    //
+    const a = document.createElement('a');
+    document.body.append(a);
+    a.style.display = 'none';
+    a.download = filename;
+    a.href = url;
+    //
+    a.dispatchEvent(new MouseEvent('click'));
+    URL.revokeObjectURL(url);
+    return content;
+}
+
 function resolve(path, from) {
     if (path.match(/^['"]?data:/)) {
         return path;
     }
     // @ts-ignore
-    const baseURL = new URL(from, window?.location);
+    const baseURL = new URL(from, window.location);
     const pathURL = new URL(path, baseURL);
     if (baseURL.protocol != pathURL.protocol ||
         baseURL.host != pathURL.host ||
@@ -374,28 +396,6 @@ async function extract(options = {}) {
             + `>` + '\n' + document.documentElement.outerHTML;
     }
     return result;
-}
-
-/**
- *
- * @param {string[]} content
- * @param {string} filename
- * @param {string} mimetype
- * @return {Promise<string[]>}
- */
-async function download(content, filename, mimetype = 'application/octet-stream; charset=utf-8') {
-    //
-    const url = URL.createObjectURL(new Blob(content, { type: mimetype }));
-    //
-    const a = document.createElement('a');
-    document.body.append(a);
-    a.style.display = 'none';
-    a.download = filename;
-    a.href = url;
-    //
-    a.dispatchEvent(new MouseEvent('click'));
-    URL.revokeObjectURL(url);
-    return content;
 }
 
 async function extractAndDownload(filename = 'critical.css', options = {}) {
