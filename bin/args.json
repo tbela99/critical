@@ -8,6 +8,12 @@
       "type": "boolean",
       "default": true
     },
+    "base": {
+      "alias": "g",
+      "demandOption": false,
+      "description": "base path using reading data from stdin",
+      "type": "string"
+    },
     "browser": {
       "alias": "b",
       "demandOption": false,
@@ -32,7 +38,7 @@
       ],
       "type": "string"
     },
-    "randomBrowser": {
+    "random-browser": {
       "alias": "r",
       "demandOption": false,
       "description": "use a random browser",
@@ -117,6 +123,12 @@
       "description": "Generate an HTML page containing inlined critical css",
       "type": "boolean"
     },
+    "json": {
+      "demandOption": false,
+      "description": "print result in JSON format",
+      "type": "boolean",
+      "default": false
+    } ,
     "verbose": {
       "alias": "v",
       "demandOption": false,

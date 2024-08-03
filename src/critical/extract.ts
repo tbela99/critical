@@ -233,7 +233,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
                 try {
 
                     // @ts-ignore
-                    console.log('analysing ' + files.get(rule.parentStyleSheet).file);
+                    console.error('analysing ' + files.get(rule.parentStyleSheet).file);
                     // @ts-ignore
                     styles.add('/* file: ' + files.get(rule.parentStyleSheet).file + ' */');
                 } catch (e) {
@@ -369,7 +369,6 @@ export async function extract(options: CriticalExtractOptions = {}) {
                                 // @ts-ignore
                                 file: font.parentStyleSheet.href
                             })
-
                         }
 
                         // @ts-ignore
@@ -422,9 +421,9 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
         if (!document.querySelector('base')) {
 
-            const base = document.createElement('base');
+            const base: HTMLBaseElement = document.createElement('base');
 
-            base.href = location.protocol + '//' + location.host + location.pathname;
+            base.href = options.base ?? (location.protocol + '//' + location.host + location.pathname);
             document.head.insertBefore(base, document.querySelector('meta[charset]')?.nextElementSibling || document.head.firstChild)
         }
 

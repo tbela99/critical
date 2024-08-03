@@ -106,9 +106,11 @@ urls.forEach(async url => critical(url, {
     - dimensions: _array_ or _string_. array of viewports. this takes precedence over height and width. viewports can be
       specified as objects with width and height property or a string.
   > output settings    
+    - base: _string_. specify HTML <base> for URL
     - html: _bool_. generate an HTML page containing the inlined critical css
     - output: _string_. change output directory. default _'./output/'_
     - fonts: _bool_. generate javascript to load web fonts. default _true_
+    - json: _bool_. dump result as JSON
   > debugging settings
     - console: _bool_. log console messages from the pages. default _true_
     - verbose: _bool_. enable verbose mode
@@ -125,37 +127,41 @@ $ critical-cli -i http://google.com
 Usage
 
 ```shell
-$ critical-cli [options+] url [url+]
+$ critical-cli.js [options+] url [url+]
 run the command line tools:
-Example: critical-cli -d 800x600 -d 1024x768 -i https://facebook.com
+Example: critical-cli.js -d 800x600 -d 1024x768 -i https://facebook.com
 
 Options:
-      --version        Show version number                             [boolean]
-  -t, --headless       enable or disable headless mode [boolean] [default: true]
-  -b, --browser        browser to use
+      --help            Show help                                      [boolean]
+      --version         Show version number                            [boolean]
+  -t, --headless        enable or disable headless mode[boolean] [default: true]
+  -g, --base            base path using reading data from stdin         [string]
+  -b, --browser         browser to use
   [string] [choices: "chromium", "firefox", "webkit", "edge", "chrome"] [default
                                                                    : "chromium"]
-  -k, --browser-type   use a mobile browser
+  -k, --browser-type    use a mobile browser
                                          [string] [choices: "mobile", "desktop"]
-  -r, --randomBrowser  use a random browser           [boolean] [default: false]
-  -i, --screenshot     Generate screenshots                            [boolean]
-  -s, --secure         enable or disable security settings such as CSP and same
-                       origin policy                                   [boolean]
-  -m, --color-scheme   color scheme
+  -r, --random-browser  use a random browser          [boolean] [default: false]
+  -i, --screenshot      Generate screenshots                           [boolean]
+  -s, --secure          enable or disable security settings such as CSP and same
+                         origin policy                                 [boolean]
+  -m, --color-scheme    color scheme
                            [string] [choices: "light", "dark"] [default: "dark"]
-  -o, --output         Output directory                                 [string]
-  -n, --filename       prefix of the generated files                    [string]
-  -w, --width          Viewport width                                   [number]
-  -a, --height         Viewport height                                  [number]
-  -d, --dimensions     Array of viewports, override height/width settings[array]
-  -f, --fonts          Generate javascript to load fonts dynamically   [boolean]
-  -l, --console        Show console messages from the browser          [boolean]
-  -c, --container      Disable additional security settings to run inside a cont
-                       ainer                                           [boolean]
-  -p, --html           Generate an HTML page containing inlined critical css
+  -o, --output          Output directory                                [string]
+  -n, --filename        prefix of the generated files                   [string]
+  -w, --width           Viewport width                                  [number]
+  -a, --height          Viewport height                                 [number]
+  -d, --dimensions      Array of viewports, override height/width settings
+                                                                         [array]
+  -f, --fonts           Generate javascript to load fonts dynamically
+                                                       [boolean] [default: true]
+  -l, --console         Show console messages from the browser         [boolean]
+  -c, --container       Disable additional security settings to run inside a con
+                        tainer                                         [boolean]
+  -p, --html            Generate an HTML page containing inlined critical css
                                                                        [boolean]
-  -v, --verbose        Enable verbose mode            [boolean] [default: false]
-  -h, --help           Show help                                       [boolean]
+      --json            print result in JSON format   [boolean] [default: false]
+  -v, --verbose         Enable verbose mode           [boolean] [default: false]
 
 
 ```
@@ -164,9 +170,26 @@ Options:
 
 ```shell
 
-$ critical-cli https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768'
+$ critical-cli https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768' --json
 ```
+
+### Read data from cli
+
+```shell
+
+$ cat pages/dashboard.html | critical-cli --base=pages/ --secure=no -i -d '1440x900' -d '1366x768' --json
+```
+
 ## CHANGELOG
+
+### V1.1.0
+
+- read data from STDIN
+- dump cli result as JSON
+
+### V1.0.1
+
+- fix package.json dependencies and dev dependencies mix up
 
 ### V1.0.0
 

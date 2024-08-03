@@ -7,7 +7,7 @@ export function resolve(path: string, from: string): string {
     }
 
     // @ts-ignore
-    const baseURL: URL = new URL(from, window.location);
+    const baseURL: URL = new URL(from, window?.location);
     const pathURL: URL = new URL(path, baseURL);
 
     if (baseURL.protocol != pathURL.protocol ||
