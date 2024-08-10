@@ -14,12 +14,12 @@ export async function extract(options: CriticalExtractOptions = {}) {
     const document: Document = window.document;
     const location: Location = window.location;
     const styles: Set<string> = new Set;
-    const excluded = ['all', 'print', ''];
+    const excluded: string[] = ['all', 'print', ''];
     const allStylesheets: MatchCSSStyleSheet[] = [];
 
     // Get a list of all the elements in the view.
-    const height = window.innerHeight;
-    const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: () => NodeFilter.SHOW_ELEMENT});
+    const height: number = window.innerHeight;
+    const walker: NodeIterator = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: () => NodeFilter.SHOW_ELEMENT});
 
     const fonts: Set<CSSFontFaceRule> = new Set;
     const fontFamilies: Set<string> = new Set;
@@ -44,7 +44,6 @@ export async function extract(options: CriticalExtractOptions = {}) {
         }
 
         try {
-
 
             // @ts-ignore
             rules = (<CSSStyleSheet>rule).cssRules ?? (<CSSStyleSheet>rule).rules;
@@ -205,7 +204,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
             // @ts-ignore
             rule = allStylesheets[k].rule;
-            let fileUpdate = false;
+            let fileUpdate: boolean = false;
 
             // @ts-ignore
             if (!files.has(rule.parentStyleSheet)) {
@@ -246,6 +245,9 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
             file = (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).file;
             css = rule.cssText;
+
+            // @ts-ignore
+            console.error({sel: rule.selectorText, css});
 
             if (file !== 'inline') {
 
@@ -296,7 +298,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
             if (rule.parentStyleSheet) {
 
-                let media = rule.parentStyleSheet.media.mediaText;
+                let media: string = rule.parentStyleSheet.media.mediaText;
 
                 if (media === 'print') {
 
@@ -404,7 +406,6 @@ export async function extract(options: CriticalExtractOptions = {}) {
         return {
 
             name: entry.name,
-
             duration: (entry.duration / 1000).toFixed(3) + 's'
         }
     });
@@ -495,7 +496,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
         if ((<FontObject[]>result.fonts).length > 0) {
 
-            const script = document.createElement('script');
+            const script: HTMLScriptElement = document.createElement('script');
             script.textContent = fontscript(<FontObject[]>result.fonts);
             document.head.append(script);
         }

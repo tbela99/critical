@@ -10,37 +10,36 @@ Extract critical CSS path for the current viewport in the current page.
 
 Using modules
 ```html
-
 <script type="module">
-  import {parse, render} from 'https://esm.sh/@tbela99/css-parser/web';
-  import {extract} from 'https://esm.sh/tbela99/critical/browser';
 
-  const result = await extract({ fonts: true });
+  import {parse, render} from 'https://esm.sh/@tbela99/css-parser@0.6.0/web';
+  import {extract} from 'https://esm.sh/@tbela99/critical@1.1.0/browser';
+
+  const results = await extract({fonts: true});
   // css is optimized using https://www.npmjs.com/package/@tbela99/css-parser
   // pretty print css
   const css = await parse(results.styles.join('\n')).then(result => render(result.ast, {minify: false}).code);
 
   console.debug(css);
-
 </script>
 ```
 
 Without using modules
 ```html
-
-<script src="./dist/browser-umd.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tbela99/css-parser/dist/index-umd-web.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tbela99/critical@1.1.0/dist/browser-umd.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tbela99/css-parser@0.6.0/dist/index-umd-web.js"></script>
 <script>
-  
-  const {parse, render} = CSSParser;
-  const {extract} = critical;
 
-  const result = await extract({fonts: true});
-  // optimize and pretty print css
-  const css = await parse(results.styles.join('\n')).then(result => render(result.ast, {minify: false}).code);
+  (async () => {
 
-  console.debug(css);
+    const {parse, render} = CSSParser;
 
+    const results = await critical.extract({fonts: true});
+    // optimize and pretty print css
+    const css = await parse(results.styles.join('\n')).then(result => render(result.ast, {minify: false}).code);
+
+    console.debug(css);
+  })();
 </script>
 ```
 
@@ -75,7 +74,8 @@ urls.forEach(async url => critical(url, {
     screenshot: true,
     secure: false,
     // dimensions can be specified as an array of string or object
-    dimensions: ['1400x900', '1200x675', '992x558']
+    dimensions: ['1400x900', '1200x675', '992x558'],
+    advanced: true
 }).then((results) => {
 
     // print extracted CSS
@@ -111,6 +111,7 @@ urls.forEach(async url => critical(url, {
     - output: _string_. change output directory. default _'./output/'_
     - fonts: _bool_. generate javascript to load web fonts. default _true_
     - json: _bool_. dump result as JSON
+    - advanced: _bool_. remove parts of css selectors that do not match any element. default _false_
   > debugging settings
     - console: _bool_. log console messages from the pages. default _true_
     - verbose: _bool_. enable verbose mode
@@ -161,6 +162,8 @@ Options:
   -p, --html            Generate an HTML page containing inlined critical css
                                                                        [boolean]
       --json            print result in JSON format   [boolean] [default: false]
+  -e, --advanced        remove parts of css selectors that do not match any elem
+                        ent                           [boolean] [default: false]
   -v, --verbose         Enable verbose mode           [boolean] [default: false]
 
 
@@ -185,6 +188,7 @@ $ cat pages/dashboard.html | critical-cli --base=pages/ --secure=no -i -d '1440x
 ### V1.1.0
 
 - read data from STDIN
+- remove unused selectors
 - dump cli result as JSON
 
 ### V1.0.1

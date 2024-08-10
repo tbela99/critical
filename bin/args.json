@@ -128,7 +128,14 @@
       "description": "print result in JSON format",
       "type": "boolean",
       "default": false
-    } ,
+    },
+    "advanced": {
+      "alias": "e",
+      "demandOption": false,
+      "description": "remove parts of css selectors that do not match any element",
+      "type": "boolean",
+      "default": false
+    },
     "verbose": {
       "alias": "v",
       "demandOption": false,

@@ -216,6 +216,8 @@ var critical = (function (exports) {
             }
             file = files.get(rule.parentStyleSheet).file;
             css = rule.cssText;
+            // @ts-ignore
+            console.error({ sel: rule.selectorText, css });
             if (file !== 'inline') {
                 // resolve url()
                 css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {

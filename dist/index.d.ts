@@ -11,6 +11,7 @@ interface CriticalOptions {
     url?: string;
     input?: string;
     headless?: boolean;
+    advanced?: boolean;
     browser?: BrowserOptions;
     browserType?: 'mobile' | 'desktop' | 'default';
     base?: string;
@@ -66,5 +67,7 @@ interface CriticalCliResult {
 
 declare function critical(options: CriticalOptions): Promise<CriticalCliResult>;
 declare function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>;
+declare function isWhiteSpace(codepoint: number): boolean;
+declare function splitRule(buffer: string): string[][];
 
-export { critical };
+export { critical, isWhiteSpace, splitRule };

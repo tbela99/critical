@@ -11,29 +11,39 @@ const aliases = new Map;
 
 aliases.set('h', 'help');
 
-for (const [name, command] of Object.entries(cliArgs.args)) {
+try {
 
-    if (aliases.has(command.alias)) {
+    for (const [name, command] of Object.entries(cliArgs.args)) {
 
-        throw new Error(`'${name}': Alias ${command.alias} already in use by ${aliases.get(command.alias)}'`);
+        if (aliases.has(command.alias)) {
+
+            throw new Error(`'${name}': Alias ${command.alias} already in use by ${aliases.get(command.alias)}'`);
+        }
+
+        aliases.set(command.alias, name);
+        aliases.set(name.replace(/-([a-z])/g, (all, one) => one.toUpperCase()), name);
+        _yargs.option(name, command);
     }
 
-    aliases.set(command.alias, name);
-    aliases.set(name.replace(/-([a-z])/g, (all, one) => one.toUpperCase()), name);
-    _yargs.option(name, command);
+    for (const name of Object.keys(_yargs.argv)) {
+
+        if (name === '_' || '$0' === name) {
+
+            continue;
+        }
+
+        if (!aliases.has(name.replace(/-([a-z])/g, (all, one) => one.toUpperCase()))) {
+
+            throw new Error(`'${name}': Unknown argument`);
+        }
+    }
 }
 
-for (const name of Object.keys(_yargs.argv)) {
+catch (error) {
 
-    if (name === '_' || '$0' === name) {
-
-        continue;
-    }
-
-    if (!aliases.has(name.replace(/-([a-z])/g, (all, one) => one.toUpperCase()))) {
-
-        throw new Error(`'${name}': Unknown argument`);
-    }
+    _yargs.showHelp();
+    console.error(error.message);
+    process.exit(1);
 }
 
 _yargs.help().alias('help', 'h') /*.strict(true) */;
@@ -52,7 +62,6 @@ for (let key of Object.keys(options)) {
     }
 }
 
-
 // @ts-ignore
 delete options._;
 // @ts-ignore
@@ -63,7 +72,6 @@ if (urls.length === 0 && process.stdin.isTTY) {
     _yargs.showHelp();
     process.exit();
 }
-
 
 if (process.stdin.isTTY == null) {
 

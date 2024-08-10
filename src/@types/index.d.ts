@@ -18,6 +18,7 @@ export interface CriticalOptions {
     url?: string;
     input?: string;
     headless?: boolean;
+    advanced?: boolean;
     browser?: BrowserOptions;
     browserType?: 'mobile' | 'desktop' | 'default';
     base?: string;
@@ -44,6 +45,7 @@ export interface CriticalExtractOptions {
     html?: boolean;
     base?: string;
     fonts?: boolean;
+    advanced?: boolean;
     signal?: AbortSignal;
 }
 
