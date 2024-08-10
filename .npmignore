@@ -1,5 +1,7 @@
 /package-lock.json
 /rollup.config.js
+/tsconfig.json
+/.gitattributes
 /screenshot.png
 # Dependency directories
 /node_modules/
@@ -7,3 +9,4 @@
 /output/
 /test/
 /src/
+/coverage/
