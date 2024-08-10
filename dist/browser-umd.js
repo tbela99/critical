@@ -1,6 +1,28 @@
 var critical = (function (exports) {
     'use strict';
 
+    /**
+     *
+     * @param {string[]} content
+     * @param {string} filename
+     * @param {string} mimetype
+     * @return {Promise<string[]>}
+     */
+    async function download(content, filename, mimetype = 'application/octet-stream; charset=utf-8') {
+        //
+        const url = URL.createObjectURL(new Blob(content, { type: mimetype }));
+        //
+        const a = document.createElement('a');
+        document.body.append(a);
+        a.style.display = 'none';
+        a.download = filename;
+        a.href = url;
+        //
+        a.dispatchEvent(new MouseEvent('click'));
+        URL.revokeObjectURL(url);
+        return content;
+    }
+
     function resolve(path, from) {
         if (path.match(/^['"]?data:/)) {
             return path;
@@ -24,14 +46,6 @@ var critical = (function (exports) {
         return '/* font preloader script: ' + fonts.length + ' */\n"fonts" in document && ' + JSON.stringify([...fonts], null, 1) + '.forEach(font => new FontFace(font.fontFamily, font.src, font.properties).load().then(font => document.fonts.add(font)))';
     }
 
-    /**
-     * {Object} options
-     * - signal {AbortSignal?} abort css extraction
-     * - html {bool?} generate HTML for each viewport
-     * - fonts {bool?} generate javascript to download fonts
-     *
-     * @returns {Promise<{styles: string[], fonts: object[], stats: object, html: string?}>}
-     */
     async function extract(options = {}) {
         const document = window.document;
         const location = window.location;
@@ -65,6 +79,7 @@ var critical = (function (exports) {
                 }
             }
             catch (e) {
+                // @ts-ignore
                 console.error(JSON.stringify({ 'message': e.message, stylesheet: rule.href }, null, 1));
             }
         }
@@ -95,6 +110,7 @@ var critical = (function (exports) {
             }
             weakMap.set(allStylesheets[k].rule, 1);
             if (allStylesheets[k].rule instanceof CSSStyleRule) {
+                // @ts-ignore
                 let selector = allStylesheets[k].rule.selectorText;
                 let match;
                 // detect pseudo selectors
@@ -109,23 +125,28 @@ var critical = (function (exports) {
                         match = nodeMap.has(document.querySelector(selector));
                     }
                     catch (e) {
+                        // @ts-ignore
                         match = nodeMap.has(document.querySelector(allStylesheets[k].rule.selectorText));
                     }
                 }
                 if (match) {
                     allStylesheets[k].match = true;
+                    // @ts-ignore
                     if (allStylesheets[k].rule.style.getPropertyValue('font-family')) {
+                        // @ts-ignore
                         allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily !== 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
                     }
                 }
             }
             else if (allStylesheets[k].rule instanceof CSSMediaRule || allStylesheets[k].rule instanceof CSSImportRule || allStylesheets[k].rule instanceof CSSConditionRule) {
+                // @ts-ignore
                 if ((allStylesheets[k].rule instanceof CSSMediaRule || allStylesheets[k].rule instanceof CSSImportRule) && (allStylesheets[k].rule.media.mediaText === 'print' || (allStylesheets[k].rule.media.mediaText !== '' && !window.matchMedia(allStylesheets[k].rule.media.mediaText).matches))) {
                     continue;
                 }
                 try {
                     const rule = allStylesheets[k].rule;
                     const rules = [];
+                    // @ts-ignore
                     const sheet = rule instanceof CSSImportRule ? rule.styleSheet.cssRules || rule.styleSheet.rules : rule.cssRules || rule.rules;
                     for (let l = 0; l < sheet.length; l++) {
                         if (!weakMap.has(sheet[l])) {
@@ -133,16 +154,20 @@ var critical = (function (exports) {
                         }
                     }
                     if (rules.length > 0) {
+                        // @ts-ignore
                         allStylesheets.splice.apply(allStylesheets, [k + 1, 0].concat(rules));
                         allStylesLength = allStylesheets.length;
                     }
                 }
                 catch (e) {
+                    // @ts-ignore
                     console.error(JSON.stringify({ 'message': e.message, stylesheet: rule.href }, null, 1));
                 }
             }
             else if (allStylesheets[k].rule instanceof CSSFontFaceRule) {
+                // @ts-ignore
                 if (allStylesheets[k].rule.style.getPropertyValue('font-family') && allStylesheets[k].rule.style.getPropertyValue('src')) {
+                    // @ts-ignore
                     fonts.add(allStylesheets[k].rule);
                 }
             }
@@ -156,31 +181,43 @@ var critical = (function (exports) {
             if (!allStylesheets[k].match) {
                 continue;
             }
+            // @ts-ignore
             rule = allStylesheets[k].rule;
             let fileUpdate = false;
+            // @ts-ignore
             if (!files.has(rule.parentStyleSheet)) {
                 //
+                // @ts-ignore
                 files.set(rule.parentStyleSheet, {
+                    // @ts-ignore
                     base: (rule.parentStyleSheet.href && rule.parentStyleSheet.href.replace(/[?#].*/, '') || location.pathname).replace(/([^/]+)$/, ''),
+                    // @ts-ignore
                     file: rule.parentStyleSheet.href || `inline style #${++inlineCount}`
                 });
                 fileUpdate = true;
             }
-            else if (file != null && file !== files.get(rule.parentStyleSheet).file) {
-                fileUpdate = true;
+            else { // @ts-ignore
+                if (file != null && file !== files.get(rule.parentStyleSheet).file) {
+                    fileUpdate = true;
+                }
             }
             if (fileUpdate) {
                 try {
-                    console.log('analysing ' + files.get(rule.parentStyleSheet).file);
+                    // @ts-ignore
+                    console.error('analysing ' + files.get(rule.parentStyleSheet).file);
+                    // @ts-ignore
                     styles.add('/* file: ' + files.get(rule.parentStyleSheet).file + ' */');
                 }
                 catch (e) {
+                    // @ts-ignore
                     console.error(JSON.stringify(e.message, null, 1));
                     console.error(JSON.stringify(rule?.parentStyleSheet?.href, null, 1));
                 }
             }
             file = files.get(rule.parentStyleSheet).file;
             css = rule.cssText;
+            // @ts-ignore
+            console.error({ sel: rule.selectorText, css });
             if (file !== 'inline') {
                 // resolve url()
                 css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {
@@ -189,6 +226,7 @@ var critical = (function (exports) {
                         return all;
                     }
                     one = one.replace(/^(['"])([^\1\s]+)\1/, '$2');
+                    // @ts-ignore
                     return 'url(' + resolve(one, files.get(rule.parentStyleSheet).base) + ')';
                 });
             }
@@ -197,11 +235,15 @@ var critical = (function (exports) {
                  *
                  * @type {CSSMediaRule}
                  */
+                // @ts-ignore
                 rule = rule.parentRule;
+                // @ts-ignore
                 if (rule.conditionText == 'print') {
                     continue loop1;
                 }
+                // @ts-ignore
                 if (!excluded.includes(rule.conditionText)) {
+                    // @ts-ignore
                     css = '@' + rule.constructor.name.replace(/^CSS(.*?)Rule/, '$1').toLowerCase() + ' ' + rule.conditionText + ' {' + css + '}';
                 }
                 if (!rule.parentRule) {
@@ -211,7 +253,7 @@ var critical = (function (exports) {
             if (rule.parentStyleSheet) {
                 let media = rule.parentStyleSheet.media.mediaText;
                 if (media === 'print') {
-                    continue loop1;
+                    continue;
                 }
                 if (media !== '') {
                     css = '@media ' + media + ' {' + css + '}';
@@ -244,15 +286,21 @@ var critical = (function (exports) {
                         'fontFamily': font.style.getPropertyValue('font-family').replace(/(['"])([^\1\s]+)\1/, '$2'),
                         src: src.replace(/(^|[,\s*])local\([^)]+\)\s*,?\s*?/g, '').replace(/url\(([^)%\s]+)\)([^,]*)(,?)\s*/g, (all, one, two, three) => {
                             one = one.replace(/(['"])([^\1\s]+)\1/, '$2');
+                            // @ts-ignore
                             if (!files.has(font.parentStyleSheet)) {
+                                // @ts-ignore
                                 if (!font.parentStyleSheet.href) {
                                     return all;
                                 }
+                                // @ts-ignore
                                 files.set(font.parentStyleSheet, {
+                                    // @ts-ignore
                                     base: font.parentStyleSheet.href.replace(/([^/]+)$/, ''),
+                                    // @ts-ignore
                                     file: font.parentStyleSheet.href
                                 });
                             }
+                            // @ts-ignore
                             return 'url(' + resolve(one, files.get(font.parentStyleSheet).base) + ')' + three;
                         }).trim(),
                         properties: {}
@@ -265,6 +313,7 @@ var critical = (function (exports) {
                             name !== 'src' &&
                             value !== '' &&
                             value !== undefined &&
+                            // @ts-ignore
                             (fontObject.properties[name.replace(/([A-Z])/g, (all, name) => '-' + name.toLowerCase())] = value);
                     }
                     usedFonts.set(JSON.stringify(fontObject), fontObject);
@@ -278,11 +327,16 @@ var critical = (function (exports) {
                 duration: (entry.duration / 1000).toFixed(3) + 's'
             };
         });
-        const result = { styles: [...styles], fonts: [...usedFonts.values()], nodeCount, stats: { nodeCount, stats } };
+        const result = {
+            styles: [...styles],
+            fonts: [...usedFonts.values()],
+            nodeCount,
+            stats: { nodeCount, stats }
+        };
         if (options.html) {
             if (!document.querySelector('base')) {
                 const base = document.createElement('base');
-                base.href = location.protocol + '//' + location.host + location.pathname;
+                base.href = options.base ?? (location.protocol + '//' + location.host + location.pathname);
                 document.head.insertBefore(base, document.querySelector('meta[charset]')?.nextElementSibling || document.head.firstChild);
             }
             if (!document.querySelector('meta[charset]')) {
@@ -325,6 +379,7 @@ var critical = (function (exports) {
             style.dataset.critical = true;
             style.textContent = [...usedFonts.values()].map((entry) => {
                 return '@font-face {' + '\n ' + Object.entries(entry).map(entry => {
+                    // @ts-ignore
                     return typeof entry[1] == 'string' ? `${entry[0] + ': ' + entry[1]}` : Object.entries(entry[1]).map(entry => `${entry[0] + ': ' + entry[1]}`).join(';\n ') + '\n}';
                 }).join(';\n');
             }).join('\n') +
@@ -346,28 +401,6 @@ var critical = (function (exports) {
                 + `>` + '\n' + document.documentElement.outerHTML;
         }
         return result;
-    }
-
-    /**
-     *
-     * @param {string[]} content
-     * @param {string} filename
-     * @param {string} mimetype
-     * @return {Promise<string[]>}
-     */
-    async function download(content, filename, mimetype = 'application/octet-stream; charset=utf-8') {
-        //
-        const url = URL.createObjectURL(new Blob(content, { type: mimetype }));
-        //
-        const a = document.createElement('a');
-        document.body.append(a);
-        a.style.display = 'none';
-        a.download = filename;
-        a.href = url;
-        //
-        a.dispatchEvent(new MouseEvent('click'));
-        URL.revokeObjectURL(url);
-        return content;
     }
 
     async function extractAndDownload(filename = 'critical.css', options = {}) {

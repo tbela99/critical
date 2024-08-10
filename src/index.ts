@@ -1,22 +1,25 @@
 import * as playwright from "playwright";
-import {devices} from "playwright";
-import {resolve, dirname, basename} from "path";
-import {mkdir, readFileSync, writeFile} from "fs";
-import {fontscript} from "./critical/fontscript.js";
-import {size} from "./file/size.js";
-import {
+import {Browser, BrowserContext, BrowserType, ConsoleMessage, devices, LaunchOptions, Page, Request} from "playwright";
+import {basename, dirname, resolve} from "node:path";
+import {readFileSync} from "node:fs";
+import {fontscript} from "./critical";
+import {size} from "./file";
+import type {
     BrowserOptions,
-    CriticalCliResult, CriticalCliStats,
+    CriticalCliResult,
+    CriticalCliStats,
     CriticalDimension,
     CriticalExtractOptions,
     CriticalOptions,
     CriticalResult,
     FontObject
 } from "./@types";
-import {Request, ConsoleMessage, BrowserType, Browser, BrowserContext, LaunchOptions, Page} from "playwright";
 import chalk from "chalk";
-import {render, transform} from "@tbela99/css-parser";
+import {AstRule, EnumToken, expand, parse, render, transform, walk} from "@tbela99/css-parser";
 import {createRequire} from 'node:module';
+import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import process from "node:process";
 
 const __dirname: string = dirname(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
@@ -39,8 +42,107 @@ async function sleep(duration: number) {
     return new Promise(resolve => setTimeout(resolve, duration + Math.ceil(Math.random() * 10)));
 }
 
-export async function critical(url: string, options: CriticalOptions = {}): Promise<CriticalCliResult> {
+async function createBrowser(options: CriticalOptions, dimension: CriticalDimension, chromium: BrowserType, browserName: "chromium" | "firefox" | "webkit" | "edge" | "chrome"): Promise<{
 
+    browser: Browser,
+    context: BrowserContext,
+    page: Page
+}> {
+    const launchOptions: LaunchOptions = <LaunchOptions>{
+        headless: options.headless,
+        bypassCSP: !options.secure,
+        defaultViewport: {
+            isMobile: true,
+            isLandscape: false,
+        },
+        waitForInitialPage: false,
+        args: <string[]>[],
+        ignoreDefaultArgs: ['--enable-automation']
+    };
+
+    launchOptions.args = [
+        '--test-type',
+        '--no-startup-window',
+        `--window-size=${(<CriticalDimension>dimension).width},${(<CriticalDimension>dimension).height}`
+    ];
+
+    if (!options.secure) {
+
+        launchOptions.args.push(
+            '--disable-web-security',
+            '--allow-running-insecure-content',
+            '--no-default-browser-check',
+            '--ignore-certificate-errors',
+            '--disable-site-isolation-trials'
+        )
+    }
+
+    if (options.container) {
+
+        launchOptions.args.push(
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--disable-setuid-sandbox",
+            "--no-sandbox"
+        )
+    }
+
+    let contextData = {};
+
+    if (options.browserType != null || options.randomUserAgent || options.randomBrowser) {
+
+        contextData = deviceNames.slice().sort(() => [-1, 0, 1][Math.floor(3 * Math.random())]).filter(d => {
+
+            if (browserName != d.defaultBrowserType) {
+
+                return false;
+            }
+
+            if (options.browserType != null) {
+
+                if (options.browserType == 'mobile') {
+
+                    return d.isMobile;
+                } else {
+
+                    return !d.isMobile;
+                }
+            }
+
+            return true;
+        })[0];
+    }
+
+    const browser: Browser = <Browser>await chromium.launch(launchOptions);
+    const context: BrowserContext = <BrowserContext>await browser.newContext({
+        ...contextData,
+        bypassCSP: !options.secure,
+        viewport: dimension
+    });
+
+    if (options.randomUserAgent) {
+
+        // antibot evasion
+        await context.addInitScript(() => {
+
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+        });
+    }
+
+    const page: Page = await context.newPage();
+    return {browser, context, page};
+}
+
+export async function critical(options: CriticalOptions): Promise<CriticalCliResult>;
+export async function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>
+
+export async function critical(url: string | CriticalOptions, options: CriticalOptions = {}): Promise<CriticalCliResult> {
+
+    if (typeof url === 'object') {
+
+        options = <CriticalOptions>url;
+        url = <string>options.url;
+    }
 
     let html: string = '';
     let fonts: Set<string> = new Set<string>;
@@ -52,8 +154,61 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
         // @ts-ignore
         playwright[browserName]) ?? <string>playwright.chromium ?? 'chromium';
 
+    if (options.input != null) {
+
+        const browser: Browser = <Browser>await chromium.launch({headless: true});
+        const context: BrowserContext = <BrowserContext>await browser.newContext();
+
+        const page: Page = await context.newPage();
+
+        await page.goto(options.input.startsWith('data:') ? options.input : 'data:text/html;base64,' + Buffer.from(options.input).toString('base64'), {waitUntil: 'networkidle'});
+
+        let base: string = options.base ?? 'file://' + process.cwd();
+
+        if (!base.endsWith('/')) {
+
+            base += '/';
+        }
+
+        if (!base.match(/^(([a-zA-Z]+:)?\/)?\//)) {
+
+            base = 'file://' + process.cwd() + '/' + base;
+        }
+
+        options.input = await page.evaluate((base: string) => {
+
+            const baseElement = (document.querySelector('base') ?? document.head.insertBefore(document.createElement('base'), document.head.firstChild)) as HTMLBaseElement;
+            baseElement.href = base;
+
+            const doctype = document.doctype as DocumentType;
+            return `<!Doctype ${doctype.name}`
+                + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
+                + (doctype.systemId
+                    ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
+                    : ``)
+                + `>` + '\n' + document.documentElement.outerHTML
+        }, base) as string;
+
+        const dir: string = await mkdtemp(tmpdir() + '/');
+
+        await writeFile(dir + '/index.html', options.input);
+        url = 'file://' + dir + '/index.html';
+
+        // @ts-ignore
+        process.on('exit', async () => await rm(dir, {recursive: true, force: true}));
+        // @ts-ignore
+        process.on('uncaughtException', async () => await rm(dir, {recursive: true, force: true}));
+        // @ts-ignore
+        process.on('unhandledRejection', async () => await rm(dir, {recursive: true, force: true}));
+
+        await page.close();
+        await context.close();
+        await browser.close();
+    }
+
     if (['"', "'"].includes(url.charAt(0))) {
 
+        // @ts-ignore
         url = url.replace(/^(['"])([^\1\s]+)\1$/, '$2');
     }
 
@@ -81,7 +236,7 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
     let theUrl: URL = new URL(url);
     let filePath: string = <string>options.output + ((<string>options.output).endsWith('/') ? '' : '/') + browserName + (options.browserType != null ? '-' + options.browserType : '') + ('/' + options.colorScheme);
-    let shortUrl: string = (theUrl.protocol == 'file:' ? basename(theUrl.pathname) : theUrl.protocol + '//' + theUrl.host + theUrl.pathname);
+    let shortUrl: string = theUrl.protocol == 'data:' ? 'data.html' : (theUrl.protocol == 'file:' ? basename(theUrl.pathname) : theUrl.protocol + '//' + theUrl.host + theUrl.pathname);
     let dimensions: string | string[] | Array<CriticalDimension>;
 
     if (filePath.slice(-1) != '/') {
@@ -108,15 +263,31 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
     // @ts-ignore
     filePath = filePath.replace(/[/]+$/, '');
 
-    mkdir(dirname(filePath), {recursive: true}, function (error) {
-
-        if (error) {
-
-            console.error({error});
-        }
-    });
+    await mkdir(dirname(filePath), {recursive: true});
 
     options.filename = filePath;
+
+    if (options.base != null) {
+
+        if (!options.base.match(/^([a-z]+:\/)?\//)) {
+
+            const parts1: string[] = (filePath.endsWith('/') ? filePath.slice(0, -1) : filePath).split('/');
+            const parts2: string[] = (options.base.endsWith('/') ? options.base.slice(0, -1) : options.base).split('/');
+
+            const result: string[] = [];
+
+            parts1.pop();
+
+            while (parts1.shift()) {
+
+                result.push('..');
+            }
+
+            result.push(...parts2);
+
+            options.base = result.join('/');
+        }
+    }
 
     if ('dimensions' in options) {
 
@@ -127,6 +298,11 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
             width: +<number>options.width,
             height: +<number>options.height
         }] : ['1920x1080', '1440x900', '1366x768', '1024x768', '768x1024', '320x480'];
+    }
+
+    if (dimensions.length == 0) {
+
+        throw new Error(`No dimensions specified`);
     }
 
     if (typeof dimensions == 'string') {
@@ -152,189 +328,127 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
         return dimension;
     });
-
     dimensions.sort(() => [-1, 0, 1][Math.floor(3 * Math.random())]);
 
     // @ts-ignore
     for (const dimension of <CriticalDimension[]>dimensions) {
 
-        const launchOptions: LaunchOptions = <LaunchOptions>{
-            headless: options.headless,
-            bypassCSP: !options.secure,
-            defaultViewport: {
-                isMobile: true,
-                isLandscape: false,
-            },
-            waitForInitialPage: false,
-            args: <string[]>[],
-            ignoreDefaultArgs: ['--enable-automation']
-        };
-
-        const size: string = ` (${dimension.width}x${dimension.height})`
-
-        launchOptions.args = [
-            '--test-type',
-            '--no-startup-window',
-            `--window-size=${(<CriticalDimension>dimension).width},${(<CriticalDimension>dimension).height}`
-        ];
-
-        if (!options.secure) {
-
-            launchOptions.args.push(
-                '--disable-web-security',
-                '--allow-running-insecure-content',
-                '--no-default-browser-check',
-                '--ignore-certificate-errors',
-                '--disable-site-isolation-trials'
-            )
-        }
-
-        if (options.container) {
-
-            launchOptions.args.push(
-                "--disable-gpu",
-                "--disable-dev-shm-usage",
-                "--disable-setuid-sandbox",
-                "--no-sandbox"
-            )
-        }
-
         if (options.verbose || options.console) {
 
-            console.info(chalk.blue(`[${shortUrl}]> selected browser `) + chalk.green(chromium.name()));
-            console.info(chalk.blue(`[${shortUrl}${size}]> set viewport to `) + chalk.green(`${dimension.width}x${dimension.height}`));
+            console.error(chalk.blue(`[${shortUrl}]> selected browser `) + chalk.green(chromium.name()));
+            console.error(chalk.blue(`[${shortUrl}${size}]> set viewport to `) + chalk.green(`${dimension.width}x${dimension.height}`));
         }
 
-        let contextData = {};
+        const {browser, context, page} = await createBrowser(options, dimension, chromium, browserName);
 
-        if (options.browserType != null || options.randomUserAgent || options.randomBrowser) {
+        try {
 
-            contextData = deviceNames.slice().sort(() => [-1, 0, 1][Math.floor(3 * Math.random())]).filter(d => {
+            const size: string = ` (${dimension.width}x${dimension.height})`;
 
-                if (browserName != d.defaultBrowserType) {
-
-                    return false;
-                }
-
-                if (options.browserType != null) {
-
-                    if (options.browserType == 'mobile') {
-
-                        return d.isMobile;
-                    } else {
-
-                        return !d.isMobile;
-                    }
-                }
-
-                return true;
-            })[0];
-        }
-
-        const browser: Browser = <Browser>await chromium.launch(launchOptions);
-        // @ts-ignore
-        const context: BrowserContext = <BrowserContext>await browser.newContext({
-            // @ts-ignore
-            ...contextData,
-            bypassCSP: !options.secure,
-            viewport: dimension
-        });
-
-        if (options.randomUserAgent) {
-
-            // antibot evasion
-            await context.addInitScript(() => {
-
-                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            await context.addInitScript(script + ';window.critical=critical;');
+            await page.emulateMedia({
+                colorScheme: options.colorScheme,
             });
-        }
 
-        await context.addInitScript(script);
-        // await context.addInitScript(minify);
+            if (options.console) {
 
-        const page: Page = await context.newPage();
+                page.on('console', (message: ConsoleMessage) =>
+                    // @ts-ignore
+                    console.error(chalk.yellow(`[${shortUrl}${size}]> ${message.type().replace(/^([a-z])/, (all: string, one: string) => one.toUpperCase())} ${message.text()}`)))
+                    // @ts-ignore
+                    .on('pageerror', ({message}) => console.error(chalk.red(`[${shortUrl}${size}]> ${message}`)))
+                    .on('requestfailed', (request: Request) => {
 
-        await page.emulateMedia({
-            colorScheme: options.colorScheme,
-        });
+                        const failure = request.failure();
+                        console.error(chalk.red(`[${shortUrl}${size}]> ${failure && failure.errorText} ${request.url()}`))
+                    });
+            }
 
-        if (options.console) {
+            console.error(chalk.blue(`[${shortUrl}${size}]> open `) + url);
 
-            page.on('console', (message: ConsoleMessage) =>
+            if (options.input != null) {
+
+                const dir: string = await mkdtemp(tmpdir() + '/');
+
+                await writeFile(dir + '/index.html', options.input);
+                url = 'file://' + dir + '/index.html';
+
                 // @ts-ignore
-                console.log(chalk.yellow(`[${shortUrl}${size}]> ${message.type().replace(/^([a-z])/, (all: string, one: string) => one.toUpperCase())} ${message.text()}`)))
+                process.on('exit', async () => await rm(dir, {recursive: true}));
                 // @ts-ignore
-                .on('pageerror', ({message}) => console.log(chalk.red(`[${shortUrl}${size}]> ${message}`)))
-                .on('requestfailed', (request: Request) => {
+                process.on('uncaughtException', async () => await rm(dir, {recursive: true}));
+                // @ts-ignore
+                process.on('unhandledRejection', async () => await rm(dir, {recursive: true}));
+            }
 
-                    const failure = request.failure();
-                    console.log(chalk.red(`[${shortUrl}${size}]> ${failure && failure.errorText} ${request.url()}`))
-                });
-        }
+            await page.goto(url, {waitUntil: 'networkidle'});
 
-        console.info(chalk.blue(`[${shortUrl}${size}]> open `) + url);
+            if (options.screenshot) {
 
-        await page.goto(url, {waitUntil: 'networkidle'});
+                const screenshot: {
+                    path: string
+                } = typeof options.screenshot == 'object' && Object.assign({}, options.screenshot) || {path: typeof options.screenshot == 'string' && options.screenshot || options.filename + '.png' || 'screenshot.png'}
 
-        if (options.screenshot) {
+                if (dimensions.length > 1) {
 
-            const screenshot: {
-                path: string
-            } = typeof options.screenshot == 'object' && Object.assign({}, options.screenshot) || {path: typeof options.screenshot == 'string' && options.screenshot || options.filename + '.png' || 'screenshot.png'}
+                    screenshot.path = screenshot.path.replace(/\.([^.]+)$/, `_${dimension.width}x${dimension.height}.\$1`)
+                }
 
-            if (dimensions.length > 1) {
+                if (options.verbose) {
 
-                screenshot.path = screenshot.path.replace(/\.([^.]+)$/, `_${dimension.width}x${dimension.height}.\$1`)
+                    console.error(chalk.blue(`[${shortUrl}${size}]> generating screenshot at `) + chalk.green(screenshot.path));
+                }
+
+                await page.screenshot(screenshot);
             }
 
             if (options.verbose) {
 
-                console.info(chalk.blue(`[${shortUrl}${size}]> generating screenshot at `) + chalk.green(screenshot.path));
+                console.error(chalk.blue(`[${shortUrl}${size}]> collect critical data`));
             }
 
-            await page.screenshot(screenshot);
-        }
-
-        if (options.verbose) {
-
-            console.info(chalk.blue(`[${shortUrl}${size}]> collect critical data`));
-        }
-
-        const data = await page.evaluate(async (param: { options: CriticalExtractOptions }) => {
-
-            // @ts-ignore
-            return await critical.extract(param.options).then((result: CriticalResult) => {
-
-                if (Array.isArray(result.fonts)) {
-
-                    // @ts-ignore
-                    result.fonts = <string[]>(result.fonts).map((font: FontObject) => JSON.stringify(font));
-                }
+            const data = await page.evaluate(async (param: { options: CriticalExtractOptions }) => {
 
                 // @ts-ignore
-                if (param.options.verbose) {
+                return await critical.extract(param.options).then((result: CriticalResult) => {
 
-                    console.log(JSON.stringify({result}, null, 1));
+                    if (Array.isArray(result.fonts)) {
+
+                        // @ts-ignore
+                        result.fonts = <string[]>(result.fonts).map((font: FontObject) => JSON.stringify(font));
+                    }
+
+                    // @ts-ignore
+                    if (param.options.verbose) {
+
+                        console.error(JSON.stringify({result}, null, 1));
+                    }
+
+                    return result;
+                });
+            }, {options});
+
+            if (data.styles != null) {
+
+                data.styles.forEach((line: string) => styles.add(line));
+                data.fonts.forEach((line: string) => fonts.add(line));
+                stats.push({width: dimension.width, height: dimension.height, stats: data.stats});
+
+                if (options.html != null && html === '') {
+
+                    html = data.html ?? '';
                 }
-
-                return result;
-            });
-        }, {options, shortUrl, size});
-
-        if (data.styles != null) {
-
-            data.styles.forEach((line: string) => styles.add(line));
-            data.fonts.forEach((line: string) => fonts.add(line));
-            stats.push({width: dimension.width, height: dimension.height, stats: data.stats});
-
-            if (options.html != null && html === '') {
-
-                html = data.html ?? '';
             }
-        }
 
-        await page.close();
-        await browser.close();
+        } catch (error: any) {
+
+            console.error(error);
+        } finally {
+
+            await page.close();
+            await context.close();
+            await browser.close();
+        }
 
         if (<number>options.pause > 0) {
 
@@ -342,14 +456,96 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
         }
     }
 
-    if (options.filename) {
+    let htmlFile: string | undefined = undefined;
+    let fontJS: string | undefined = undefined;
+    let minCssFile: string | undefined = undefined;
+    let rawCssFile: string | undefined = undefined;
+    let nestedCssFile: string | undefined = undefined;
+    let minNestedCssFile: string | undefined = undefined;
 
-        const rawCSS: string = [...styles].join('\n');
-        const {code, unminified}: { code: string; unminified: string } = (await transform(rawCSS).then(result => {
+    if (options.filename != null) {
 
-            return {code: result.code, unminified: render(result.ast, {minify: false}).code}
+        let rawCSS: string = [...styles].join('\n');
+        let css: string = rawCSS;
+
+        if (options.advanced) {
+
+            const {browser, context, page} = await createBrowser(options, dimensions[0], chromium, browserName);
+
+            await page.emulateMedia({
+                colorScheme: options.colorScheme,
+            });
+
+            const dimension = dimensions[0];
+            const size: string = ` (${dimension.width}x${dimension.height})`;
+
+            console.error(chalk.blue(`[${shortUrl}${size}]> open `) + url);
+
+            if (options.input != null) {
+
+                const dir: string = await mkdtemp(tmpdir() + '/');
+
+                await writeFile(dir + '/index.html', options.input);
+                url = 'file://' + dir + '/index.html';
+
+                // @ts-ignore
+                process.on('exit', async () => await rm(dir, {recursive: true}));
+                // @ts-ignore
+                process.on('uncaughtException', async () => await rm(dir, {recursive: true, force: true}));
+                // @ts-ignore
+                process.on('unhandledRejection', async () => await rm(dir, {recursive: true, force: true}));
+            }
+
+            await page.goto(url, {waitUntil: 'networkidle'});
+
+            const result = await parse(rawCSS, {minify:  false}).then(result => Object.assign(result, {ast: expand(result.ast)}));
+
+            for (const {node, parent} of walk(result.ast)) {
+
+                if (node.typ == EnumToken.RuleNodeType) {
+
+                    const filtered = await Promise.all(splitRule((node as AstRule).sel).map(async sel => {
+
+                        const rule: string[] = sel.filter(sel => !sel.match(/::?((before)|(after))/));
+
+                        if (rule.length == 0) {
+                            return sel;
+                        }
+
+                        return await page.evaluate((param: {
+                            sel: string
+                        }): boolean => document.querySelector(param.sel) != null, {sel: rule.join('')}) ? sel : [];
+                    })).then((r: string[][]) => r.filter((r: string[]): boolean => r.length > 0));
+
+                    if (filtered.length == 0) {
+
+                        parent!.chi.splice(parent!.chi.indexOf(node), 1);
+                    } else {
+
+                        (node as AstRule).sel = filtered.reduce((acc, curr) => acc + (acc.length == 0 ? '' : ',') + curr.join(''), '');
+                    }
+                }
+            }
+
+            css = render(result.ast, {minify: false, expandNestingRules: true}).code;
+
+            await page.close();
+            await context.close();
+            await browser.close();
+        }
+
+        const {code, unminified}: {
+            code: string;
+            unminified: string
+        } = (await transform(css, {expandNestingRules: true}).then(result => {
+
+            return {code: result.code, unminified: render(result.ast, {minify: false, expandNestingRules: true}).code}
         }));
-        const {code: nestedCSS, unminified: nestedUnminified}: { code: string; unminified: string } = (await transform(rawCSS, {nestingRules: true}).then(result => {
+
+        const {code: nestedCSS, unminified: nestedUnminified}: {
+            code: string;
+            unminified: string
+        } = (await transform(css, {nestingRules: true}).then(result => {
 
             return {code: result.code, unminified: render(result.ast, {minify: false}).code}
         }));
@@ -361,88 +557,48 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
             cssFile += '.css';
         }
 
-        const minCssFile: string = cssFile.slice(0, -4) + '.min.css';
-        const rawCssFile: string = cssFile.slice(0, -4) + '.raw.css';
+        minCssFile = cssFile.slice(0, -4) + '.min.css' as string;
+        rawCssFile = cssFile.slice(0, -4) + '.raw.css' as string;
 
-        const minNestedCssFile: string = cssFile.slice(0, -4) + '.nested.min.css';
-        const nestedCssFile: string = cssFile.slice(0, -4) + '.nested.css';
+        minNestedCssFile = cssFile.slice(0, -4) + '.nested.min.css' as string;
+        nestedCssFile = cssFile.slice(0, -4) + '.nested.css' as string;
 
-        console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minCssFile + ' [' + size(code.length) + ']'));
-        // @ts-ignore
-        writeFile(minCssFile, code, function (error: Error | null) {
-
-            if (error) {
-
-                console.error(error);
-            }
-        });
-
-        console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(cssFile + ' [' + size(unminified.length) + ']'));
-
-        writeFile(cssFile, unminified, function (error: Error | null) {
-
-            if (error) {
-
-                console.error({error});
-            }
-        });
+        console.error(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minCssFile + ' [' + size(code.length) + ']'));
 
         // @ts-ignore
-        writeFile(rawCssFile, rawCSS, function (error: Error | null) {
+        await writeFile(minCssFile, code);
 
-            if (error) {
+        console.error(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(cssFile + ' [' + size(unminified.length) + ']'));
 
-                console.error({error});
-            }
-        });
-
-        console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minNestedCssFile + ' [' + size(nestedCSS.length) + ']'));
-        // @ts-ignore
-        writeFile(minNestedCssFile, nestedCSS, function (error: Error | null) {
-
-            if (error) {
-
-                console.error({error});
-            }
-        });
-
-        console.info(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(nestedCssFile + ' [' + size(nestedUnminified.length) + ']'));
-
-        writeFile(nestedCssFile, nestedUnminified, function (error: Error | null) {
-
-            if (error) {
-
-                console.error({error});
-            }
-        });
+        await writeFile(cssFile, unminified);
 
         // @ts-ignore
-        writeFile(rawCssFile, rawCSS, function (error: Error | null) {
+        await writeFile(rawCssFile, rawCSS);
 
-            if (error) {
+        console.error(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(minNestedCssFile + ' [' + size(nestedCSS.length) + ']'));
+        // @ts-ignore
+        await writeFile(minNestedCssFile, nestedCSS);
 
-                console.error({error});
+        console.error(chalk.blue(`[${shortUrl}]> writing css at `) + chalk.green(nestedCssFile + ' [' + size(nestedUnminified.length) + ']'));
+
+        await writeFile(nestedCssFile, nestedUnminified);
+
+        // @ts-ignore
+        await writeFile(rawCssFile, rawCSS);
+
+        if (options.html != null && html != null && html !== '') {
+
+            const match: RegExpMatchArray | null = html.match(/<style data-critical="true">((.|[\r\n])*?)<\/style>/);
+
+            if (match) {
+
+                html = html.replace(match[0], `<style data-critical="true">${css}</style>`);
             }
-        });
-    }
 
-    if (options.html != null && html != null && html !== '') {
-
-        const match: RegExpMatchArray | null = html.match(/<style data-critical="true">((.|[\r\n])*?)<\/style>/);
-
-        if (match) {
-
-            html = html.replace(match[0], `<style data-critical="true">${[...styles].join('\n')}</style>`);
+            htmlFile = options.filename + '.html';
+            // @ts-ignore
+            await writeFile(htmlFile, html);
         }
-
-        // @ts-ignore
-        writeFile(`${options.filename}.html`, html, function (error: Error) {
-
-            if (error) {
-
-                console.error({error});
-            }
-        });
     }
 
     const fontObjects: Set<FontObject> = <Set<FontObject>>new Set([...fonts].map((font: string) => JSON.parse(font)));
@@ -459,23 +615,168 @@ export async function critical(url: string, options: CriticalOptions = {}): Prom
 
         if (fontObjects.size == 0) {
 
-            console.info(chalk.yellow(`[${shortUrl}]> no preload font found`));
+            console.error(chalk.yellow(`[${shortUrl}]> no preload font found`));
         } else {
 
             data = fontscript([...fontObjects]);
-            console.info(chalk.blue(`[${shortUrl}]> writing `) + chalk.green(fontObjects.size.toString()) + chalk.blue(` preload font script at `) +
+            console.error(chalk.blue(`[${shortUrl}]> writing `) + chalk.green(fontObjects.size.toString()) + chalk.blue(` preload font script at `) +
                 chalk.green(`${fontJS} [` + size(data.length) + ']'));
         }
 
         // @ts-ignore
-        writeFile(fontJS, data, function (error) {
-
-            if (error) {
-
-                console.error({error});
-            }
-        });
+        await writeFile(fontJS, data);
     }
 
-    return {styles: [...styles], fonts: [...fonts], stats, html};
+    return {
+        styles: [...styles],
+        files: {
+
+            html: htmlFile,
+            fonts: fontJS,
+            css: {
+
+                min: minCssFile,
+                raw: rawCssFile,
+                nested: nestedCssFile,
+                minNested: minNestedCssFile
+            }
+
+        }, fonts: [...fonts], stats, html
+    };
+}
+
+export function isWhiteSpace(codepoint: number): boolean {
+
+    return codepoint == 0x9 || codepoint == 0x20 ||
+        // isNewLine
+        codepoint == 0xa || codepoint == 0xc || codepoint == 0xd;
+}
+
+export function splitRule(buffer: string): string[][] {
+
+    const result: string[][] = [[]];
+    let str: string = '';
+
+    for (let i = 0; i < buffer.length; i++) {
+
+        let chr: string = buffer.charAt(i);
+
+        if (isWhiteSpace(chr.charCodeAt(0))) {
+
+            let k: number = i;
+
+            while (k + 1 < buffer.length) {
+
+                if (isWhiteSpace(buffer[k + 1].charCodeAt(0))) {
+
+                    k++;
+                    continue;
+                }
+
+                break;
+            }
+
+            if (str !== '') {
+
+                // @ts-ignore
+                result.at(-1).push(str);
+                str = '';
+            }
+
+            // @ts-ignore
+            if (result.at(-1).length > 0) {
+
+                // @ts-ignore
+                result.at(-1).push(' ');
+            }
+
+            i = k;
+            continue;
+        }
+
+        if (chr == ',') {
+
+            if (str !== '') {
+                // @ts-ignore
+                result.at(-1).push(str);
+                str = '';
+            }
+
+            result.push([]);
+            continue;
+        }
+
+        if (chr == ':') {
+
+            if (str !== '') {
+                // @ts-ignore
+                result.at(-1).push(str);
+                str = '';
+            }
+
+            if (buffer.charAt(i + 1) == ':') {
+
+                chr += buffer.charAt(++i);
+            }
+
+            str += chr;
+            continue;
+        }
+
+        str += chr;
+        if (chr == '\\') {
+
+            str += buffer.charAt(++i);
+            continue;
+        }
+
+        if (chr == '"' || chr == "'") {
+
+            let k = i;
+            while (++k < buffer.length) {
+                chr = buffer.charAt(k);
+                str += chr;
+                if (chr == '//') {
+                    str += buffer.charAt(++k);
+                    continue;
+                }
+                if (chr == buffer.charAt(i)) {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        if (chr == '(' || chr == '[') {
+            const open = chr;
+            const close = chr == '(' ? ')' : ']';
+            let inParens = 1;
+            let k = i;
+            while (++k < buffer.length) {
+                chr = buffer.charAt(k);
+                if (chr == '\\') {
+                    str += buffer.slice(k, k + 2);
+                    k++;
+                    continue;
+                }
+                str += chr;
+                if (chr == open) {
+                    inParens++;
+                } else if (chr == close) {
+                    inParens--;
+                }
+                if (inParens == 0) {
+                    break;
+                }
+            }
+            i = k;
+        }
+    }
+
+    if (str !== '') {
+        // @ts-ignore
+        result.at(-1).push(str);
+    }
+
+    return result;
 }

@@ -1,5 +1,3 @@
-import {TransformResult, TransformOptions} from "@tbela99/css-parser";
-
 export type Font = {
 
     src: string;
@@ -17,9 +15,13 @@ export interface CriticalDimension {
 
 export interface CriticalOptions {
 
+    url?: string;
+    input?: string;
     headless?: boolean;
+    advanced?: boolean;
     browser?: BrowserOptions;
     browserType?: 'mobile' | 'desktop' | 'default';
+    base?: string;
     width?: number;
     height?: number;
     dimensions?: string | Array<string> | Array<CriticalDimension>;
@@ -40,8 +42,10 @@ export interface CriticalOptions {
 
 export interface CriticalExtractOptions {
 
-    fonts?: boolean;
     html?: boolean;
+    base?: string;
+    fonts?: boolean;
+    advanced?: boolean;
     signal?: AbortSignal;
 }
 
@@ -75,6 +79,19 @@ export interface CriticalCliStats {
 export interface CriticalCliResult {
     fonts: Array<string>,
     stats: Array<CriticalCliStats>,
+
+    files: {
+
+        html?: string;
+        fonts?: string;
+        css: {
+
+            min?: string;
+            raw?: string;
+            nested?: string;
+            minNested?: string;
+        }
+    },
     styles: any[];
     html: string
 }

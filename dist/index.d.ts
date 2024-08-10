@@ -8,9 +8,13 @@ interface CriticalDimension {
 
 interface CriticalOptions {
 
+    url?: string;
+    input?: string;
     headless?: boolean;
+    advanced?: boolean;
     browser?: BrowserOptions;
     browserType?: 'mobile' | 'desktop' | 'default';
+    base?: string;
     width?: number;
     height?: number;
     dimensions?: string | Array<string> | Array<CriticalDimension>;
@@ -44,10 +48,26 @@ interface CriticalCliStats {
 interface CriticalCliResult {
     fonts: Array<string>,
     stats: Array<CriticalCliStats>,
+
+    files: {
+
+        html?: string;
+        fonts?: string;
+        css: {
+
+            min?: string;
+            raw?: string;
+            nested?: string;
+            minNested?: string;
+        }
+    },
     styles: any[];
     html: string
 }
 
-declare function critical(url: string, options?: CriticalOptions): Promise<CriticalCliResult>;
+declare function critical(options: CriticalOptions): Promise<CriticalCliResult>;
+declare function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>;
+declare function isWhiteSpace(codepoint: number): boolean;
+declare function splitRule(buffer: string): string[][];
 
-export { critical };
+export { critical, isWhiteSpace, splitRule };
