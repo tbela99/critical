@@ -1,0 +1,37 @@
+{
+  "name": "@tbela99/critical",
+  "version": "1.1.1",
+  "publish": {
+    "include": [
+      "src",
+      "bin",
+      "README.md",
+      "package.json",
+      "LICENSE.md",
+      "screenshot.png",
+      "tsconfig.json"
+    ],
+    "exclude": [
+      "dist",
+      "test",
+      ".gitattributes",
+      ".github",
+      ".idea",
+      ".npmignore",
+      ".npmrc",
+      "package-lock.json",
+      "output",
+      "rollup.config.js",
+      ".DS_Store",
+      ".idea",
+      "ROADMAP.md",
+      "docs",
+      "package-lock.json"
+    ]
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/index.ts",
+    "./web":  "./src/browser.ts"
+  }
+}

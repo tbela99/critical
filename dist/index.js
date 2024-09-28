@@ -10,6 +10,7 @@ import { createRequire } from 'node:module';
 import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
+import { Buffer } from 'node:buffer';
 
 const __dirname = dirname(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
@@ -100,14 +101,18 @@ async function critical(url, options = {}) {
             base = 'file://' + process.cwd() + '/' + base;
         }
         options.input = await page.evaluate((base) => {
+            // @ts-ignore
             const baseElement = (document.querySelector('base') ?? document.head.insertBefore(document.createElement('base'), document.head.firstChild));
             baseElement.href = base;
+            // @ts-ignore
             const doctype = document.doctype;
+            // @ts-ignore
             return `<!Doctype ${doctype.name}`
                 + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
                 + (doctype.systemId
                     ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
                     : ``)
+                // @ts-ignore
                 + `>` + '\n' + document.documentElement.outerHTML;
         }, base);
         const dir = await mkdtemp(tmpdir() + '/');
@@ -332,6 +337,7 @@ async function critical(url, options = {}) {
                         if (rule.length == 0) {
                             return sel;
                         }
+                        // @ts-ignore
                         return await page.evaluate((param) => document.querySelector(param.sel) != null, { sel: rule.join('') }) ? sel : [];
                     })).then((r) => r.filter((r) => r.length > 0));
                     if (filtered.length == 0) {

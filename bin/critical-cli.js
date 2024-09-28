@@ -1,8 +1,8 @@
-#!/usr/bin/env node --enable-source-maps
+#!/usr/bin/env -S node --enable-source-maps
 import {critical} from '../dist/index.js';
 import yargs from 'yargs';
 import {hideBin} from 'yargs/helpers';
-import cliArgs from '../bin/args.json' assert {type: 'json'};
+import cliArgs from '../bin/args.json' with {type: 'json'};
 import process from "node:process";
 
 // @ts-ignore
@@ -37,9 +37,7 @@ try {
             throw new Error(`'${name}': Unknown argument`);
         }
     }
-}
-
-catch (error) {
+} catch (error) {
 
     _yargs.showHelp();
     console.error(error.message);
@@ -100,9 +98,7 @@ if (urls.length === 0) {
             process.stderr.write(url + '\n' + error.message + '\n' + error.stack + '\n');
         }
     })];
-}
-
-else {
+} else {
 
     const promises = [];
 // @ts-ignore
