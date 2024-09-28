@@ -9,25 +9,33 @@ import type {
     RuleList
 } from "../@types";
 
-export async function extract(options: CriticalExtractOptions = {}) {
+export async function extract(options: CriticalExtractOptions = {}): Promise<CriticalResult> {
 
+    // @ts-ignore
     const document: Document = window.document;
+    // @ts-ignore
     const location: Location = window.location;
     const styles: Set<string> = new Set;
     const excluded: string[] = ['all', 'print', ''];
     const allStylesheets: MatchCSSStyleSheet[] = [];
 
     // Get a list of all the elements in the view.
+    // @ts-ignore
     const height: number = window.innerHeight;
+    // @ts-ignore
     const walker: NodeIterator = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, {acceptNode: () => NodeFilter.SHOW_ELEMENT});
-
+    // @ts-ignore
     const fonts: Set<CSSFontFaceRule> = new Set;
     const fontFamilies: Set<string> = new Set;
+    // @ts-ignore
     const files: Map<CSSStyleSheet, FileMapObject> = new Map;
+    // @ts-ignore
     const weakMap: WeakMap<RuleList | CSSStyleSheet, number> = new WeakMap;
+    // @ts-ignore
     const nodeMap: Set<Node> = new Set;
     let nodeCount: number = 0;
     let k: number;
+    // @ts-ignore
     let rule: CSSMediaRule | CSSStyleRule;
     let rules;
 
@@ -38,6 +46,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
         // @ts-ignore
         rule = <CSSMediaRule>document.styleSheets[k];
 
+        // @ts-ignore
         if (rule.media.mediaText === 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
 
             continue;
@@ -64,7 +73,8 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
     if (allStylesheets.length === 0) {
 
-        return {styles: [], fonts: [], stats: {}};
+        // @ts-ignore
+        return <CriticalResult>{styles: [], fonts: [], stats: {}, nodeCount: 0};
     }
 
     let node;
@@ -73,6 +83,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
     performance.mark('nodeWalking');
 
+    // @ts-ignore
     while ((node = <HTMLElement>walker.nextNode())) {
 
         if (options && options.signal && options.signal.aborted) {
@@ -103,6 +114,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
         weakMap.set(allStylesheets[k].rule, 1);
 
+        // @ts-ignore
         if (allStylesheets[k].rule instanceof CSSStyleRule) {
 
             // @ts-ignore
@@ -142,6 +154,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
                 }
             }
 
+            // @ts-ignore
         } else if (allStylesheets[k].rule instanceof CSSMediaRule || allStylesheets[k].rule instanceof CSSImportRule || allStylesheets[k].rule instanceof CSSConditionRule) {
 
             // @ts-ignore
@@ -175,6 +188,8 @@ export async function extract(options: CriticalExtractOptions = {}) {
                 // @ts-ignore
                 console.error(JSON.stringify({'message': e.message, stylesheet: rule.href}, null, 1));
             }
+
+            // @ts-ignore
         } else if (allStylesheets[k].rule instanceof CSSFontFaceRule) {
 
             // @ts-ignore
@@ -243,6 +258,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
                 }
             }
 
+            // @ts-ignore
             file = (<FileMapObject>files.get(<CSSStyleSheet>rule.parentStyleSheet)).file;
             css = rule.cssText;
 
@@ -251,7 +267,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
             if (file !== 'inline') {
 
-                // resolve url()
+                // @ts-ignore@
                 css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {
 
                     one = one.trim();
@@ -261,6 +277,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
                         return all;
                     }
 
+                    // @ts-ignore
                     one = one.replace(/^(['"])([^\1\s]+)\1/, '$2');
 
                     // @ts-ignore
@@ -328,6 +345,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
         let j;
         let name;
         let value;
+        // @ts-ignore
         let font: CSSFontFaceRule;
         let fontObject;
         let src;
@@ -336,8 +354,9 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
         for (font of fonts) {
 
-            if (font.style.getPropertyValue('font-family').split(/\s*,\s*/).some(token => {
+            if (font.style.getPropertyValue('font-family').split(/\s*,\s*/).some((token: string) => {
 
+                // @ts-ignore
                 return fontFamilies.has(token.replace(/(['"])([^\1\s]+)\1/, '$2'));
             })) {
 
@@ -349,9 +368,12 @@ export async function extract(options: CriticalExtractOptions = {}) {
                 }
 
                 fontObject = {
+                    // @ts-ignore
                     'fontFamily': font.style.getPropertyValue('font-family').replace(/(['"])([^\1\s]+)\1/, '$2'),
+                    // @ts-ignore
                     src: src.replace(/(^|[,\s*])local\([^)]+\)\s*,?\s*?/g, '').replace(/url\(([^)%\s]+)\)([^,]*)(,?)\s*/g, (all, one, two, three) => {
 
+                        // @ts-ignore
                         one = one.replace(/(['"])([^\1\s]+)\1/, '$2');
 
                         // @ts-ignore
@@ -422,6 +444,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
         if (!document.querySelector('base')) {
 
+            // @ts-ignore
             const base: HTMLBaseElement = document.createElement('base');
 
             base.href = options.base ?? (location.protocol + '//' + location.host + location.pathname);
@@ -457,6 +480,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
             }
         });
 
+        // @ts-ignore
         const script: HTMLScriptElement = document.createElement('script');
 
         script.textContent = `
@@ -475,7 +499,7 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
         document.head.append(script);
 
-        // add data-attribute
+        // @ts-ignore
         const style: HTMLStyleElement = document.createElement('style');
         // @ts-ignore
         style.dataset.critical = true;
@@ -491,23 +515,28 @@ export async function extract(options: CriticalExtractOptions = {}) {
 
         if (style.textContent.trim() !== '') {
 
+            // @ts-ignore
             document.head.insertBefore(style, <HTMLBaseElement | null>document.querySelector('base')?.nextElementSibling);
         }
 
         if ((<FontObject[]>result.fonts).length > 0) {
 
+            // @ts-ignore
             const script: HTMLScriptElement = document.createElement('script');
             script.textContent = fontscript(<FontObject[]>result.fonts);
             document.head.append(script);
         }
 
+        // @ts-ignore
         const doctype: DocumentType = document.doctype as DocumentType;
 
+        // @ts-ignore
         result.html = `<!Doctype ${doctype.name}`
             + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
             + (doctype.systemId
                 ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
                 : ``)
+            // @ts-ignore
             + `>` + '\n' + document.documentElement.outerHTML
     }
 

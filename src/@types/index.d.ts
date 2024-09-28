@@ -1,10 +1,3 @@
-export type Font = {
-
-    src: string;
-};
-
-export type Fonts = Array<Font>;
-
 export type BrowserOptions = 'chromium' | 'firefox' | 'webkit' | 'edge' | 'chrome';
 
 export interface CriticalDimension {
@@ -96,6 +89,7 @@ export interface CriticalCliResult {
     html: string
 }
 
+// @ts-ignore
 export type RuleList = CSSMediaRule | CSSImportRule | CSSRule | CSSConditionRule | CSSStyleSheet;
 
 export interface FontObject {

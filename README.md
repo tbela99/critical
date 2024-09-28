@@ -13,7 +13,7 @@ Using modules
 <script type="module">
 
   import {parse, render} from 'https://esm.sh/@tbela99/css-parser@0.6.0/web';
-  import {extract} from 'https://esm.sh/@tbela99/critical@1.1.0/browser';
+  import {extract} from 'https://esm.sh/@tbela99/critical@1.1.1/browser';
 
   const results = await extract({fonts: true});
   // css is optimized using https://www.npmjs.com/package/@tbela99/css-parser
@@ -26,7 +26,7 @@ Using modules
 
 Without using modules
 ```html
-<script src="https://cdn.jsdelivr.net/gh/tbela99/critical@1.1.0/dist/browser-umd.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tbela99/critical@1.1.1/dist/browser-umd.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tbela99/css-parser@0.6.0/dist/index-umd-web.js"></script>
 <script>
 
@@ -105,7 +105,10 @@ urls.forEach(async url => critical(url, {
     - height: _int_. viewport height. default _600_
     - dimensions: _array_ or _string_. array of viewports. this takes precedence over height and width. viewports can be
       specified as objects with width and height property or a string.
-  > output settings    
+  > input settings
+    - input: _string_. specify HTML input
+    - base: _string_. specify HTML <base> of the HTML input
+  > output settings
     - base: _string_. specify HTML <base> for URL
     - html: _bool_. generate an HTML page containing the inlined critical css
     - output: _string_. change output directory. default _'./output/'_
@@ -118,14 +121,43 @@ urls.forEach(async url => critical(url, {
 
 ## Command line script
 
+### Use with npx
+
+```bash
+$ npx @tbela99/critical --help
+$ npx @tbela99/critical -r -i -e --html https://github.com/ https://nodejs.org
+```
+
+### Use with bun
+
+```bash
+$ bunx @tbela99/critical --help
+$ bunx @tbela99/critical -r -i -e --html https://github.com/ https://nodejs.org
+```
+
+### Install from npm
+
+```bash
+$ npm install @tbela99/critical
+```
+
+### Install from jsr
+install for deno specific project
+
+```bash
+$ deno add @tbela99/critical
+```
+
+### Install globally
+
 when installed globally, it is available as _critical-cli_
 
 ```bash
-$ sudo npm install -g @tbela99/critical
+$ npm install -g @tbela99/critical
 $ critical-cli -i http://google.com
 ```
 
-Usage
+## Usage
 
 ```shell
 $ critical-cli.js [options+] url [url+]
@@ -184,6 +216,11 @@ $ cat pages/dashboard.html | critical-cli --base=pages/ --secure=no -i -d '1440x
 ```
 
 ## CHANGELOG
+
+### V1.1.1
+
+- fix node 22 compatibility issues 
+- publish to jsr.io
 
 ### V1.1.0
 

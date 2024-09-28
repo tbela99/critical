@@ -20,6 +20,7 @@ import {createRequire} from 'node:module';
 import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import process from "node:process";
+import {Buffer} from "node:buffer";
 
 const __dirname: string = dirname(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
@@ -36,6 +37,17 @@ const deviceNames: Array<{
     hasTouch: boolean;
     defaultBrowserType: string;
 }> = Object.values(devices);
+
+interface Document {
+
+}
+
+interface DocumentType {
+    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/DocumentType/publicId) */
+    readonly publicId: string;
+    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/DocumentType/systemId) */
+    readonly systemId: string;
+}
 
 async function sleep(duration: number) {
 
@@ -134,7 +146,7 @@ async function createBrowser(options: CriticalOptions, dimension: CriticalDimens
 }
 
 export async function critical(options: CriticalOptions): Promise<CriticalCliResult>;
-export async function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>
+export async function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>;
 
 export async function critical(url: string | CriticalOptions, options: CriticalOptions = {}): Promise<CriticalCliResult> {
 
@@ -177,15 +189,19 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
 
         options.input = await page.evaluate((base: string) => {
 
+            // @ts-ignore
             const baseElement = (document.querySelector('base') ?? document.head.insertBefore(document.createElement('base'), document.head.firstChild)) as HTMLBaseElement;
             baseElement.href = base;
 
+            // @ts-ignore
             const doctype = document.doctype as DocumentType;
+            // @ts-ignore
             return `<!Doctype ${doctype.name}`
                 + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
                 + (doctype.systemId
                     ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
                     : ``)
+                // @ts-ignore
                 + `>` + '\n' + document.documentElement.outerHTML
         }, base) as string;
 
@@ -498,7 +514,7 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
 
             await page.goto(url, {waitUntil: 'networkidle'});
 
-            const result = await parse(rawCSS, {minify:  false}).then(result => Object.assign(result, {ast: expand(result.ast)}));
+            const result = await parse(rawCSS, {minify: false}).then(result => Object.assign(result, {ast: expand(result.ast)}));
 
             for (const {node, parent} of walk(result.ast)) {
 
@@ -512,8 +528,10 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
                             return sel;
                         }
 
+                        // @ts-ignore
                         return await page.evaluate((param: {
-                            sel: string
+                            sel: string;
+                            // @ts-ignore
                         }): boolean => document.querySelector(param.sel) != null, {sel: rule.join('')}) ? sel : [];
                     })).then((r: string[][]) => r.filter((r: string[]): boolean => r.length > 0));
 

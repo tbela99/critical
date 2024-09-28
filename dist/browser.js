@@ -8,13 +8,14 @@
 async function download(content, filename, mimetype = 'application/octet-stream; charset=utf-8') {
     //
     const url = URL.createObjectURL(new Blob(content, { type: mimetype }));
-    //
+    // @ts-ignore
     const a = document.createElement('a');
+    // @ts-ignore
     document.body.append(a);
     a.style.display = 'none';
     a.download = filename;
     a.href = url;
-    //
+    // @ts-ignore
     a.dispatchEvent(new MouseEvent('click'));
     URL.revokeObjectURL(url);
     return content;
@@ -44,27 +45,37 @@ function fontscript(fonts) {
 }
 
 async function extract(options = {}) {
+    // @ts-ignore
     const document = window.document;
+    // @ts-ignore
     const location = window.location;
     const styles = new Set;
     const excluded = ['all', 'print', ''];
     const allStylesheets = [];
     // Get a list of all the elements in the view.
+    // @ts-ignore
     const height = window.innerHeight;
+    // @ts-ignore
     const walker = document.createNodeIterator(document, NodeFilter.SHOW_ELEMENT, { acceptNode: () => NodeFilter.SHOW_ELEMENT });
+    // @ts-ignore
     const fonts = new Set;
     const fontFamilies = new Set;
+    // @ts-ignore
     const files = new Map;
+    // @ts-ignore
     const weakMap = new WeakMap;
+    // @ts-ignore
     const nodeMap = new Set;
     let nodeCount = 0;
     let k;
+    // @ts-ignore
     let rule;
     let rules;
     performance.mark('filterStylesheets');
     for (k = 0; k < document.styleSheets.length; k++) {
         // @ts-ignore
         rule = document.styleSheets[k];
+        // @ts-ignore
         if (rule.media.mediaText === 'print' || (rule.media.mediaText !== '' && !window.matchMedia(rule.media.mediaText).matches)) {
             continue;
         }
@@ -82,12 +93,14 @@ async function extract(options = {}) {
     }
     performance.measure('filter stylesheets', 'filterStylesheets');
     if (allStylesheets.length === 0) {
-        return { styles: [], fonts: [], stats: {} };
+        // @ts-ignore
+        return { styles: [], fonts: [], stats: {}, nodeCount: 0 };
     }
     let node;
     let rect;
     let allStylesLength = allStylesheets.length;
     performance.mark('nodeWalking');
+    // @ts-ignore
     while ((node = walker.nextNode())) {
         if (options && options.signal && options.signal.aborted) {
             return Promise.reject('Aborted');
@@ -106,6 +119,7 @@ async function extract(options = {}) {
             continue;
         }
         weakMap.set(allStylesheets[k].rule, 1);
+        // @ts-ignore
         if (allStylesheets[k].rule instanceof CSSStyleRule) {
             // @ts-ignore
             let selector = allStylesheets[k].rule.selectorText;
@@ -134,6 +148,7 @@ async function extract(options = {}) {
                     allStylesheets[k].rule.style.getPropertyValue('font-family').split(/\s*,\s*/).forEach(fontFamily => fontFamily !== 'inherit' && fontFamilies.add(fontFamily.replace(/(['"])([^\1\s]+)\1/, '$2')));
                 }
             }
+            // @ts-ignore
         }
         else if (allStylesheets[k].rule instanceof CSSMediaRule || allStylesheets[k].rule instanceof CSSImportRule || allStylesheets[k].rule instanceof CSSConditionRule) {
             // @ts-ignore
@@ -160,6 +175,7 @@ async function extract(options = {}) {
                 // @ts-ignore
                 console.error(JSON.stringify({ 'message': e.message, stylesheet: rule.href }, null, 1));
             }
+            // @ts-ignore
         }
         else if (allStylesheets[k].rule instanceof CSSFontFaceRule) {
             // @ts-ignore
@@ -211,17 +227,19 @@ async function extract(options = {}) {
                 console.error(JSON.stringify(rule?.parentStyleSheet?.href, null, 1));
             }
         }
+        // @ts-ignore
         file = files.get(rule.parentStyleSheet).file;
         css = rule.cssText;
         // @ts-ignore
         console.error({ sel: rule.selectorText, css });
         if (file !== 'inline') {
-            // resolve url()
+            // @ts-ignore@
             css = css.replace(/url\(([^)%\s]*?)\)/g, function (all, one) {
                 one = one.trim();
                 if (one.match(/^['"]?data:/)) {
                     return all;
                 }
+                // @ts-ignore
                 one = one.replace(/^(['"])([^\1\s]+)\1/, '$2');
                 // @ts-ignore
                 return 'url(' + resolve(one, files.get(rule.parentStyleSheet).base) + ')';
@@ -267,12 +285,14 @@ async function extract(options = {}) {
         let j;
         let name;
         let value;
+        // @ts-ignore
         let font;
         let fontObject;
         let src;
         performance.mark('fontsExtraction');
         for (font of fonts) {
-            if (font.style.getPropertyValue('font-family').split(/\s*,\s*/).some(token => {
+            if (font.style.getPropertyValue('font-family').split(/\s*,\s*/).some((token) => {
+                // @ts-ignore
                 return fontFamilies.has(token.replace(/(['"])([^\1\s]+)\1/, '$2'));
             })) {
                 src = font.style.getPropertyValue('src');
@@ -280,8 +300,11 @@ async function extract(options = {}) {
                     continue;
                 }
                 fontObject = {
+                    // @ts-ignore
                     'fontFamily': font.style.getPropertyValue('font-family').replace(/(['"])([^\1\s]+)\1/, '$2'),
+                    // @ts-ignore
                     src: src.replace(/(^|[,\s*])local\([^)]+\)\s*,?\s*?/g, '').replace(/url\(([^)%\s]+)\)([^,]*)(,?)\s*/g, (all, one, two, three) => {
+                        // @ts-ignore
                         one = one.replace(/(['"])([^\1\s]+)\1/, '$2');
                         // @ts-ignore
                         if (!files.has(font.parentStyleSheet)) {
@@ -332,6 +355,7 @@ async function extract(options = {}) {
     };
     if (options.html) {
         if (!document.querySelector('base')) {
+            // @ts-ignore
             const base = document.createElement('base');
             base.href = options.base ?? (location.protocol + '//' + location.host + location.pathname);
             document.head.insertBefore(base, document.querySelector('meta[charset]')?.nextElementSibling || document.head.firstChild);
@@ -355,6 +379,7 @@ async function extract(options = {}) {
                 node.dataset.async = '';
             }
         });
+        // @ts-ignore
         const script = document.createElement('script');
         script.textContent = `
         window.addEventListener('DOMContentLoaded', () => Array.from(document.querySelectorAll('link[data-async]')).forEach(node => {
@@ -370,7 +395,7 @@ async function extract(options = {}) {
                 node.removeAttribute('data-async');
         }))`;
         document.head.append(script);
-        // add data-attribute
+        // @ts-ignore
         const style = document.createElement('style');
         // @ts-ignore
         style.dataset.critical = true;
@@ -382,34 +407,36 @@ async function extract(options = {}) {
         }).join('\n') +
             '\n' + result.styles.join('\n');
         if (style.textContent.trim() !== '') {
+            // @ts-ignore
             document.head.insertBefore(style, document.querySelector('base')?.nextElementSibling);
         }
         if (result.fonts.length > 0) {
+            // @ts-ignore
             const script = document.createElement('script');
             script.textContent = fontscript(result.fonts);
             document.head.append(script);
         }
+        // @ts-ignore
         const doctype = document.doctype;
+        // @ts-ignore
         result.html = `<!Doctype ${doctype.name}`
             + (doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : '')
             + (doctype.systemId
                 ? (doctype.publicId ? `` : ` SYSTEM`) + ` "${doctype.systemId}"`
                 : ``)
+            // @ts-ignore
             + `>` + '\n' + document.documentElement.outerHTML;
     }
     return result;
 }
 
 async function extractAndDownload(filename = 'critical.css', options = {}) {
-    return extract(options).
-        then(async (content) => download(content.styles, filename, 'text/css; charset=utf-8').
-        then(async () => {
+    return extract(options).then(async (content) => download(content.styles, filename, 'text/css; charset=utf-8').then(async () => {
         if (content.fonts.length > 0) {
             // @ts-ignore
             return download([fontscript(content.fonts)], filename.replace(/\.css$/, '.js'), 'text/javascript; charset=utf-8');
         }
-    }).
-        then(() => content));
+    }).then(() => content));
 }
 
 export { extractAndDownload as download, extract, fontscript };
