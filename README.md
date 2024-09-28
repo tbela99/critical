@@ -1,5 +1,5 @@
 # CRITICAL PATH GENERATOR
-[![npm](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftbela99%2Fcritical%2Fmaster%2Fpackage.json&query=version&logo=npm&label=npm&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2F%40tbela99%2Fcritical)](https://www.npmjs.com/package/@tbela99/critical) [![NPM Downloads](https://img.shields.io/npm/dm/%40tbela99%2Fcritical)](https://www.npmjs.com/package/@tbela99/critical)
+[![npm](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftbela99%2Fcritical%2Fmaster%2Fpackage.json&query=version&logo=npm&label=npm&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2F%40tbela99%2Fcritical)](https://www.npmjs.com/package/@tbela99/critical) [![jsr](https://img.shields.io/jsr/v/%40tbela99/critical?link=https%3A%2F%2Fjsr.io%2F%40tbela99%2Fcritical)](https://jsr.io/%40tbela99/critical) [![NPM Downloads](https://img.shields.io/npm/dm/%40tbela99%2Fcritical)](https://www.npmjs.com/package/@tbela99/critical)
 ![screenshot](https://raw.githubusercontent.com/tbela99/critical/master/screenshot.png)
 
 Critical path generator tools using node oe the web browser.
