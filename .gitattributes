@@ -1,4 +1,6 @@
 /test/ export-ignore
 /src/  export-ignore
-/rollup.config.js  export-ignore
+/rollup.config.js  export-ignore linguist-vendored
+/test/  export-ignore linguist-vendored
+/dist/  linguist-vendored
 /screenshot.png  export-ignore
