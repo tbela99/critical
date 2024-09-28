@@ -13,7 +13,7 @@ import type {
     CriticalOptions,
     CriticalResult,
     FontObject
-} from "./@types";
+} from "./@types/index.d.ts";
 import chalk from "chalk";
 import {AstRule, EnumToken, expand, parse, render, transform, walk} from "@tbela99/css-parser";
 import {createRequire} from 'node:module';
@@ -145,7 +145,14 @@ async function createBrowser(options: CriticalOptions, dimension: CriticalDimens
     return {browser, context, page};
 }
 
+/**
+ * execute critical css generation
+ */
 export async function critical(options: CriticalOptions): Promise<CriticalCliResult>;
+
+/**
+ * execute critical css generation
+ */
 export async function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>;
 
 export async function critical(url: string | CriticalOptions, options: CriticalOptions = {}): Promise<CriticalCliResult> {
@@ -663,6 +670,10 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
     };
 }
 
+/**
+ *
+ * test whitespace codepoints
+ */
 export function isWhiteSpace(codepoint: number): boolean {
 
     return codepoint == 0x9 || codepoint == 0x20 ||
@@ -670,6 +681,10 @@ export function isWhiteSpace(codepoint: number): boolean {
         codepoint == 0xa || codepoint == 0xc || codepoint == 0xd;
 }
 
+/**
+ *
+ * split css rule
+ */
 export function splitRule(buffer: string): string[][] {
 
     const result: string[][] = [[]];

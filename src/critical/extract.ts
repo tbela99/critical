@@ -9,6 +9,9 @@ import type {
     RuleList
 } from "../@types";
 
+/**
+ * generate critical css data
+ */
 export async function extract(options: CriticalExtractOptions = {}): Promise<CriticalResult> {
 
     // @ts-ignore

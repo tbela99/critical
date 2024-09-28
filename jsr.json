@@ -12,8 +12,8 @@
       "tsconfig.json"
     ],
     "exclude": [
-      "dist",
-      "test",
+      "dist/",
+      "test/",
       ".gitattributes",
       ".github",
       ".idea",
