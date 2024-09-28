@@ -124,15 +124,15 @@ urls.forEach(async url => critical(url, {
 ### Use with npx
 
 ```bash
-$ npx @tbela99/critical --help
-$ npx @tbela99/critical -r -i -e --html https://github.com/ https://nodejs.org
+$ npx @tbela99/critical@latest --help
+$ npx @tbela99/critical@latest -r -i -e --html https://github.com/ https://nodejs.org
 ```
 
 ### Use with bun
 
 ```bash
-$ bunx @tbela99/critical --help
-$ bunx @tbela99/critical -r -i -e --html https://github.com/ https://nodejs.org
+$ bunx @tbela99/critical@latest --help
+$ bunx @tbela99/critical@latest -r -i -e --html https://github.com/ https://nodejs.org
 ```
 
 ### Install from npm
