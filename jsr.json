@@ -19,7 +19,6 @@
       ".idea",
       ".npmignore",
       ".npmrc",
-      "package-lock.json",
       "output",
       "rollup.config.js",
       ".DS_Store",
