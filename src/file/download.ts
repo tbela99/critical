@@ -1,9 +1,6 @@
 /**
  *
- * @param {string[]} content
- * @param {string} filename
- * @param {string} mimetype
- * @return {Promise<string[]>}
+ * generate download file
  */
 export async function download(content: Array<string>, filename: string, mimetype: string = 'application/octet-stream; charset=utf-8'): Promise<Array<string>> {
 
