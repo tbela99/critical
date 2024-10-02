@@ -45,6 +45,13 @@
       "type": "boolean",
       "default": false
     },
+    "random-user-agent": {
+      "alias": "u",
+      "demandOption": false,
+      "description": "use a random user agent",
+      "type": "boolean",
+      "default": false
+    },
     "screenshot": {
       "alias": "i",
       "demandOption": false,

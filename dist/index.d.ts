@@ -65,9 +65,13 @@ interface CriticalCliResult {
     html: string
 }
 
+/**
+ * execute critical css generation
+ */
 declare function critical(options: CriticalOptions): Promise<CriticalCliResult>;
+/**
+ * execute critical css generation
+ */
 declare function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>;
-declare function isWhiteSpace(codepoint: number): boolean;
-declare function splitRule(buffer: string): string[][];
 
-export { critical, isWhiteSpace, splitRule };
+export { critical };

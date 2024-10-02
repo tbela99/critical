@@ -12,8 +12,8 @@ Using modules
 ```html
 <script type="module">
 
-  import {parse, render} from 'https://esm.sh/@tbela99/css-parser@0.6.0/web';
-  import {extract} from 'https://esm.sh/@tbela99/critical@1.1.1/browser';
+  import {parse, render} from 'https://esm.sh/@tbela99/css-parser@0.7.1/web';
+  import {extract} from 'https://esm.sh/@tbela99/critical@1.2.0/browser';
 
   const results = await extract({fonts: true});
   // css is optimized using https://www.npmjs.com/package/@tbela99/css-parser
@@ -26,8 +26,8 @@ Using modules
 
 Without using modules
 ```html
-<script src="https://cdn.jsdelivr.net/gh/tbela99/critical@1.1.1/dist/browser-umd.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tbela99/css-parser@0.6.0/dist/index-umd-web.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tbela99/critical@1.2.0/dist/browser-umd.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tbela99/css-parser@0.7.1/dist/index-umd-web.js"></script>
 <script>
 
   (async () => {
@@ -175,6 +175,7 @@ Options:
   -k, --browser-type    use a mobile browser
                                          [string] [choices: "mobile", "desktop"]
   -r, --random-browser  use a random browser          [boolean] [default: false]
+  -u, --random-user-agent  use a random user agent    [boolean] [default: false]
   -i, --screenshot      Generate screenshots                           [boolean]
   -s, --secure          enable or disable security settings such as CSP and same
                          origin policy                                 [boolean]
@@ -203,12 +204,21 @@ Options:
 
 ### Example
 
+### Read data from URL
+
 ```shell
 
 $ critical-cli https://github.com/ https://nodejs.org --secure=no -i -d '1440x900' -d '1366x768' --json
 ```
 
-### Read data from cli
+### Read data from file(s)
+
+```shell
+
+$ critical-cli pages/dashboard.html pages/404.html --secure=no -i -d '1440x900' -d '1366x768' --json
+```
+
+### Read data from STDIN
 
 ```shell
 
@@ -216,6 +226,11 @@ $ cat pages/dashboard.html | critical-cli --base=pages/ --secure=no -i -d '1440x
 ```
 
 ## CHANGELOG
+
+### V1.2.0
+
+- accept files parameters in addition to urls
+- add missing cli argument 'random-user-agent'
 
 ### V1.1.1
 

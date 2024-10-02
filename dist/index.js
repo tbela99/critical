@@ -1,18 +1,19 @@
 import * as playwright from 'playwright';
 import { devices } from 'playwright';
-import { dirname, resolve, basename } from 'node:path';
+import { dirname, basename } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { mkdtemp, writeFile, rm, realpath, mkdir } from 'node:fs/promises';
 import { size } from './file/size.js';
 import { fontscript } from './critical/fontscript.js';
 import chalk from 'chalk';
 import { parse, expand, walk, EnumToken, render, transform } from '@tbela99/css-parser';
 import { createRequire } from 'node:module';
-import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { Buffer } from 'node:buffer';
+import { splitRule } from './utils/splitRule.js';
 
-const __dirname = dirname(new URL(import.meta.url).pathname);
+dirname(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
 const script = readFileSync(require.resolve('@tbela99/critical/umd'), { encoding: "utf-8" });
 // @ts-ignore
@@ -92,6 +93,7 @@ async function critical(url, options = {}) {
         const browser = await chromium.launch({ headless: true });
         const context = await browser.newContext();
         const page = await context.newPage();
+        process.chdir(process.cwd());
         await page.goto(options.input.startsWith('data:') ? options.input : 'data:text/html;base64,' + Buffer.from(options.input).toString('base64'), { waitUntil: 'networkidle' });
         let base = options.base ?? 'file://' + process.cwd();
         if (!base.endsWith('/')) {
@@ -133,7 +135,7 @@ async function critical(url, options = {}) {
         url = url.replace(/^(['"])([^\1\s]+)\1$/, '$2');
     }
     if (!url.match(/^([a-zA-Z]+:)?\/\//)) {
-        url = 'file://' + (url.charAt(0) == '/' ? url : resolve(__dirname + '/' + url));
+        url = 'file://' + (await realpath(url));
     }
     options = {
         headless: true,
@@ -170,7 +172,7 @@ async function critical(url, options = {}) {
         filePath += 'index';
     }
     // @ts-ignore
-    filePath = filePath.replace(/[/]+$/, '');
+    filePath = filePath.replace(/\/+$/, '');
     await mkdir(dirname(filePath), { recursive: true });
     options.filename = filePath;
     if (options.base != null) {
@@ -423,111 +425,6 @@ async function critical(url, options = {}) {
         }, fonts: [...fonts], stats, html
     };
 }
-function isWhiteSpace(codepoint) {
-    return codepoint == 0x9 || codepoint == 0x20 ||
-        // isNewLine
-        codepoint == 0xa || codepoint == 0xc || codepoint == 0xd;
-}
-function splitRule(buffer) {
-    const result = [[]];
-    let str = '';
-    for (let i = 0; i < buffer.length; i++) {
-        let chr = buffer.charAt(i);
-        if (isWhiteSpace(chr.charCodeAt(0))) {
-            let k = i;
-            while (k + 1 < buffer.length) {
-                if (isWhiteSpace(buffer[k + 1].charCodeAt(0))) {
-                    k++;
-                    continue;
-                }
-                break;
-            }
-            if (str !== '') {
-                // @ts-ignore
-                result.at(-1).push(str);
-                str = '';
-            }
-            // @ts-ignore
-            if (result.at(-1).length > 0) {
-                // @ts-ignore
-                result.at(-1).push(' ');
-            }
-            i = k;
-            continue;
-        }
-        if (chr == ',') {
-            if (str !== '') {
-                // @ts-ignore
-                result.at(-1).push(str);
-                str = '';
-            }
-            result.push([]);
-            continue;
-        }
-        if (chr == ':') {
-            if (str !== '') {
-                // @ts-ignore
-                result.at(-1).push(str);
-                str = '';
-            }
-            if (buffer.charAt(i + 1) == ':') {
-                chr += buffer.charAt(++i);
-            }
-            str += chr;
-            continue;
-        }
-        str += chr;
-        if (chr == '\\') {
-            str += buffer.charAt(++i);
-            continue;
-        }
-        if (chr == '"' || chr == "'") {
-            let k = i;
-            while (++k < buffer.length) {
-                chr = buffer.charAt(k);
-                str += chr;
-                if (chr == '//') {
-                    str += buffer.charAt(++k);
-                    continue;
-                }
-                if (chr == buffer.charAt(i)) {
-                    break;
-                }
-            }
-            continue;
-        }
-        if (chr == '(' || chr == '[') {
-            const open = chr;
-            const close = chr == '(' ? ')' : ']';
-            let inParens = 1;
-            let k = i;
-            while (++k < buffer.length) {
-                chr = buffer.charAt(k);
-                if (chr == '\\') {
-                    str += buffer.slice(k, k + 2);
-                    k++;
-                    continue;
-                }
-                str += chr;
-                if (chr == open) {
-                    inParens++;
-                }
-                else if (chr == close) {
-                    inParens--;
-                }
-                if (inParens == 0) {
-                    break;
-                }
-            }
-            i = k;
-        }
-    }
-    if (str !== '') {
-        // @ts-ignore
-        result.at(-1).push(str);
-    }
-    return result;
-}
 
-export { critical, isWhiteSpace, splitRule };
+export { critical };
 //# sourceMappingURL=index.js.map

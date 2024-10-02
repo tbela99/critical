@@ -3,10 +3,7 @@ var critical = (function (exports) {
 
     /**
      *
-     * @param {string[]} content
-     * @param {string} filename
-     * @param {string} mimetype
-     * @return {Promise<string[]>}
+     * generate download file
      */
     async function download(content, filename, mimetype = 'application/octet-stream; charset=utf-8') {
         //
@@ -43,10 +40,16 @@ var critical = (function (exports) {
         return pathURL.pathname + pathURL.search + pathURL.hash;
     }
 
+    /**
+     * generate javascript to load web fonts
+     */
     function fontscript(fonts) {
         return '/* font preloader script: ' + fonts.length + ' */\n"fonts" in document && ' + JSON.stringify([...fonts], null, 1) + '.forEach(font => new FontFace(font.fontFamily, font.src, font.properties).load().then(font => document.fonts.add(font)))';
     }
 
+    /**
+     * generate critical css data
+     */
     async function extract(options = {}) {
         // @ts-ignore
         const document = window.document;
@@ -433,6 +436,9 @@ var critical = (function (exports) {
         return result;
     }
 
+    /**
+     * generate and download critical css
+     */
     async function extractAndDownload(filename = 'critical.css', options = {}) {
         return extract(options).then(async (content) => download(content.styles, filename, 'text/css; charset=utf-8').then(async () => {
             if (content.fonts.length > 0) {
