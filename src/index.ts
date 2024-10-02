@@ -1,7 +1,8 @@
 import * as playwright from "playwright";
 import {Browser, BrowserContext, BrowserType, ConsoleMessage, devices, LaunchOptions, Page, Request} from "playwright";
-import {basename, dirname, resolve} from "node:path";
+import {basename, dirname} from "node:path";
 import {readFileSync} from "node:fs";
+import { realpath} from "node:fs/promises";
 import {fontscript} from "./critical";
 import {size} from "./file";
 import type {
@@ -21,8 +22,8 @@ import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import process from "node:process";
 import {Buffer} from "node:buffer";
+import {splitRule} from "./utils";
 
-const __dirname: string = dirname(new URL(import.meta.url).pathname);
 const require = createRequire(import.meta.url);
 
 const script: string = readFileSync(require.resolve('@tbela99/critical/umd'), {encoding: "utf-8"});
@@ -31,22 +32,35 @@ const script: string = readFileSync(require.resolve('@tbela99/critical/umd'), {e
 const deviceNames: Array<{
     userAgent: string;
     viewport: any[];
-    screen: any[];
+    screen: {
+        width: number;
+        height: number;
+    };
     deviceScaleFactor: number;
     isMobile: boolean;
     hasTouch: boolean;
     defaultBrowserType: string;
 }> = Object.values(devices);
 
-interface Document {
-
-}
-
 interface DocumentType {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/DocumentType/publicId) */
     readonly publicId: string;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/DocumentType/systemId) */
     readonly systemId: string;
+}
+
+interface Context {
+
+    userAgent: string;
+    viewport: any[];
+    deviceScaleFactor: number;
+    isMobile: boolean;
+    hasTouch: boolean;
+    defaultBrowserType: string;
+    screen: {
+        width: number;
+        height: number;
+    }
 }
 
 async function sleep(duration: number) {
@@ -60,6 +74,7 @@ async function createBrowser(options: CriticalOptions, dimension: CriticalDimens
     context: BrowserContext,
     page: Page
 }> {
+
     const launchOptions: LaunchOptions = <LaunchOptions>{
         headless: options.headless,
         bypassCSP: !options.secure,
@@ -99,7 +114,7 @@ async function createBrowser(options: CriticalOptions, dimension: CriticalDimens
         )
     }
 
-    let contextData = {};
+    let contextData:Context = {} as Context;
 
     if (options.browserType != null || options.randomUserAgent || options.randomBrowser) {
 
@@ -146,12 +161,12 @@ async function createBrowser(options: CriticalOptions, dimension: CriticalDimens
 }
 
 /**
- * execute critical css generation
+ * execute critical css data generation
  */
 export async function critical(options: CriticalOptions): Promise<CriticalCliResult>;
 
 /**
- * execute critical css generation
+ * execute critical css data generation
  */
 export async function critical(url: string, options: CriticalOptions): Promise<CriticalCliResult>;
 
@@ -179,6 +194,8 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
         const context: BrowserContext = <BrowserContext>await browser.newContext();
 
         const page: Page = await context.newPage();
+
+        process.chdir(process.cwd());
 
         await page.goto(options.input.startsWith('data:') ? options.input : 'data:text/html;base64,' + Buffer.from(options.input).toString('base64'), {waitUntil: 'networkidle'});
 
@@ -237,7 +254,7 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
 
     if (!url.match(/^([a-zA-Z]+:)?\/\//)) {
 
-        url = 'file://' + (url.charAt(0) == '/' ? url : resolve(__dirname + '/' + url));
+        url = 'file://' + (await realpath(url));
     }
 
     options = {
@@ -284,7 +301,7 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
     }
 
     // @ts-ignore
-    filePath = filePath.replace(/[/]+$/, '');
+    filePath = filePath.replace(/\/+$/, '');
 
     await mkdir(dirname(filePath), {recursive: true});
 
@@ -377,7 +394,7 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
 
                 page.on('console', (message: ConsoleMessage) =>
                     // @ts-ignore
-                    console.error(chalk.yellow(`[${shortUrl}${size}]> ${message.type().replace(/^([a-z])/, (all: string, one: string) => one.toUpperCase())} ${message.text()}`)))
+                    console.error(chalk.yellow(`[${shortUrl}${size}]> ${message.type().replace(/^([a-z])/, (all: string, one: string): string => one.toUpperCase())} ${message.text()}`)))
                     // @ts-ignore
                     .on('pageerror', ({message}) => console.error(chalk.red(`[${shortUrl}${size}]> ${message}`)))
                     .on('requestfailed', (request: Request) => {
@@ -670,146 +687,3 @@ export async function critical(url: string | CriticalOptions, options: CriticalO
     };
 }
 
-/**
- *
- * test whitespace codepoints
- */
-export function isWhiteSpace(codepoint: number): boolean {
-
-    return codepoint == 0x9 || codepoint == 0x20 ||
-        // isNewLine
-        codepoint == 0xa || codepoint == 0xc || codepoint == 0xd;
-}
-
-/**
- *
- * split css rule
- */
-export function splitRule(buffer: string): string[][] {
-
-    const result: string[][] = [[]];
-    let str: string = '';
-
-    for (let i = 0; i < buffer.length; i++) {
-
-        let chr: string = buffer.charAt(i);
-
-        if (isWhiteSpace(chr.charCodeAt(0))) {
-
-            let k: number = i;
-
-            while (k + 1 < buffer.length) {
-
-                if (isWhiteSpace(buffer[k + 1].charCodeAt(0))) {
-
-                    k++;
-                    continue;
-                }
-
-                break;
-            }
-
-            if (str !== '') {
-
-                // @ts-ignore
-                result.at(-1).push(str);
-                str = '';
-            }
-
-            // @ts-ignore
-            if (result.at(-1).length > 0) {
-
-                // @ts-ignore
-                result.at(-1).push(' ');
-            }
-
-            i = k;
-            continue;
-        }
-
-        if (chr == ',') {
-
-            if (str !== '') {
-                // @ts-ignore
-                result.at(-1).push(str);
-                str = '';
-            }
-
-            result.push([]);
-            continue;
-        }
-
-        if (chr == ':') {
-
-            if (str !== '') {
-                // @ts-ignore
-                result.at(-1).push(str);
-                str = '';
-            }
-
-            if (buffer.charAt(i + 1) == ':') {
-
-                chr += buffer.charAt(++i);
-            }
-
-            str += chr;
-            continue;
-        }
-
-        str += chr;
-        if (chr == '\\') {
-
-            str += buffer.charAt(++i);
-            continue;
-        }
-
-        if (chr == '"' || chr == "'") {
-
-            let k = i;
-            while (++k < buffer.length) {
-                chr = buffer.charAt(k);
-                str += chr;
-                if (chr == '//') {
-                    str += buffer.charAt(++k);
-                    continue;
-                }
-                if (chr == buffer.charAt(i)) {
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if (chr == '(' || chr == '[') {
-            const open = chr;
-            const close = chr == '(' ? ')' : ']';
-            let inParens = 1;
-            let k = i;
-            while (++k < buffer.length) {
-                chr = buffer.charAt(k);
-                if (chr == '\\') {
-                    str += buffer.slice(k, k + 2);
-                    k++;
-                    continue;
-                }
-                str += chr;
-                if (chr == open) {
-                    inParens++;
-                } else if (chr == close) {
-                    inParens--;
-                }
-                if (inParens == 0) {
-                    break;
-                }
-            }
-            i = k;
-        }
-    }
-
-    if (str !== '') {
-        // @ts-ignore
-        result.at(-1).push(str);
-    }
-
-    return result;
-}
